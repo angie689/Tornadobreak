@@ -1,7 +1,8 @@
 import XCTest
 
 final class GameplayUITests: XCTestCase {
-    func testMenuPlaySteerPauseAndReturn() throws {
+    @MainActor
+    func testMenuPlaySteerPauseAndReturn() async throws {
         let app = XCUIApplication()
         app.launch()
         app.buttons["playButton"].tap()
