@@ -46,7 +46,7 @@ final class SimulationTests: XCTestCase {
         XCTAssertGreaterThan(sim.wind, 200)
     }
     func testColdAirWeakensAndStabilityReducesLoss() {
-        var progress = Progress()
+        var progress = TornadoCore.Progress()
         progress.upgrades[Upgrade.stability.rawValue] = 3
         var base = Simulation(level: Level.all[2])
         var stable = Simulation(level: Level.all[2], progress: progress)
@@ -66,7 +66,7 @@ final class SimulationTests: XCTestCase {
         XCTAssertGreaterThan(stable.energy, base.energy)
     }
     func testMovementClampsToWorldAndSpeedUpgradeWorks() {
-        var progress = Progress()
+        var progress = TornadoCore.Progress()
         progress.upgrades[Upgrade.speed.rawValue] = 3
         var base = Simulation(level: Level.all[0])
         var fast = Simulation(level: Level.all[0], progress: progress)
@@ -97,7 +97,7 @@ final class SimulationTests: XCTestCase {
         XCTAssertEqual(occurrences, 1)
     }
     func testSuctionImprovesLiftWithoutChangingEF() {
-        var progress = Progress()
+        var progress = TornadoCore.Progress()
         progress.upgrades[Upgrade.suction.rawValue] = 3
         let base = Simulation(level: Level.all[0])
         let upgraded = Simulation(level: Level.all[0], progress: progress)

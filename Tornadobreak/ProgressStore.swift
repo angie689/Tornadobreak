@@ -4,18 +4,18 @@ import TornadoCore
 
 @MainActor
 final class ProgressStore: ObservableObject {
-    @Published private(set) var progress: Progress
+    @Published private(set) var progress: TornadoCore.Progress
     private let defaults: UserDefaults
     private let key = "tornadobreak.progress.v1"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        if let data = defaults.data(forKey: key), let saved = try? JSONDecoder().decode(Progress.self, from: data) {
+        if let data = defaults.data(forKey: key), let saved = try? JSONDecoder().decode(TornadoCore.Progress.self, from: data) {
             var sanitized = saved
             sanitized.coins = max(0, saved.coins)
             progress = sanitized
         } else {
-            progress = Progress()
+            progress = TornadoCore.Progress()
         }
     }
     func purchase(_ upgrade: Upgrade) {
@@ -39,7 +39,7 @@ final class ProgressStore: ObservableObject {
         if next != progress { commit(next) }
         return (next.coins - before, completion)
     }
-    private func commit(_ value: Progress) {
+    private func commit(_ value: TornadoCore.Progress) {
         guard let data = try? JSONEncoder().encode(value) else { return }
         defaults.set(data, forKey: key)
         progress = value

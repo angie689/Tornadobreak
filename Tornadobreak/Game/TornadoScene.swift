@@ -22,7 +22,7 @@ final class TornadoScene: SKScene {
     private let core = SKShapeNode(circleOfRadius: 10)
     private let halo = SKShapeNode(circleOfRadius: 26)
 
-    init(level: Level, progress: Progress) {
+    init(level: Level, progress: TornadoCore.Progress) {
         simulation = Simulation(level: level, progress: progress)
         super.init(size: CGSize(width: 414, height: 896))
         scaleMode = .resizeFill

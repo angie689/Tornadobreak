@@ -7,7 +7,7 @@ import XCTest
 final class AppTests: XCTestCase {
     func testObjectsVisiblyLiftBeforeDestruction() async throws {
         try await MainActor.run {
-            let scene = TornadoScene(level: Level.all[0], progress: Progress())
+            let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
             let view = SKView(frame: CGRect(x: 0, y: 0, width: 414, height: 896))
             view.presentScene(scene)
             defer { scene.stop() }
@@ -35,7 +35,7 @@ final class AppTests: XCTestCase {
     }
     func testSceneBuildsAndUpdatesActualTornado() async {
         await MainActor.run {
-            let scene = TornadoScene(level: Level.all[0], progress: Progress())
+            let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
             let view = SKView(frame: CGRect(x: 0, y: 0, width: 414, height: 896))
             view.presentScene(scene)
             XCTAssertGreaterThan(scene.children.count, 4)
