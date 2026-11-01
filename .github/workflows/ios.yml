@@ -44,6 +44,12 @@ jobs:
             -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
             -derivedDataPath build/simulator -resultBundlePath build/Tests.xcresult \
             -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/simulator.log
+      - name: Export simulator screenshots
+        if: always()
+        run: |
+          if [ -d build/Tests.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots || true
+          fi
       - name: Build unsigned iPhone application
         run: |
           set -o pipefail
@@ -69,5 +75,6 @@ jobs:
           path: |
             build/*.log
             build/Tests.xcresult
+            build/screenshots
           if-no-files-found: ignore
           retention-days: 14

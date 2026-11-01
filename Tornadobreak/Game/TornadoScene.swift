@@ -52,7 +52,10 @@ final class TornadoScene: SKScene {
         let result = simulation.step(delta: delta, direction: direction)
         for id in result.destroyed { destroy(id) }
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
-        tornado.setScale(simulation.radius / 26)
+        // A thin rope at EF0 broadens into a wider, rounder circulation at EF5.
+        let baseScale = simulation.radius / 26
+        tornado.xScale = baseScale * (0.72 + Double(simulation.ef) * 0.056)
+        tornado.yScale = baseScale * (1.08 - Double(simulation.ef) * 0.016)
         if lastEF != simulation.ef {
             lastEF = simulation.ef
             let colors: [UIColor] = [.systemMint, .systemTeal, .systemCyan, .systemYellow, .systemOrange, .systemRed]
@@ -187,11 +190,9 @@ final class TornadoScene: SKScene {
         }
     }
     private func updateCamera() {
-        let halfWidth = min(Level.worldSize.x / 2, size.width * 1.42 / 2)
-        let halfHeight = min(Level.worldSize.y / 2, size.height * 1.42 / 2)
-        // Offset so the tornado stays in the clear area between the HUD and controls.
-        cameraNode.position = CGPoint(x: min(max(halfWidth, simulation.position.x), Level.worldSize.x - halfWidth),
-                                      y: min(max(halfHeight, simulation.position.y + 45), Level.worldSize.y - halfHeight))
+        // Keep the tornado visible between HUD and controls, including at world edges.
+        // The bounded playfield may end within the viewport; controls never cover the player.
+        cameraNode.position = CGPoint(x: simulation.position.x, y: simulation.position.y + 45)
     }
     private func loadMap() {
         let level = simulation.level

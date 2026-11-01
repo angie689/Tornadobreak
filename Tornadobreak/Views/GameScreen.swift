@@ -192,7 +192,7 @@ private struct GameRunView: View {
                 VStack(spacing: 17, content: content).padding(26)
                     .frame(maxWidth: 400).background(Theme.panel, in: RoundedRectangle(cornerRadius: 28))
                     .padding(20).frame(maxWidth: .infinity)
-            }.defaultScrollAnchorCompat()
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -220,14 +220,9 @@ private struct Joystick: View {
                 }
                 .onEnded { _ in offset = .zero; move(Point(0, 0)) })
             .onDisappear { move(Point(0, 0)) }
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("Steering thumbstick. Drag to move.")
             .accessibilityIdentifier("joystick")
     }
 }
 
-private extension View {
-    // Center short result cards while allowing scrolling on small iPhones / larger text sizes.
-    func defaultScrollAnchorCompat() -> some View {
-        self.frame(maxHeight: .infinity).safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 16) }
-    }
-}

@@ -12,11 +12,16 @@ final class GameplayUITests: XCTestCase {
         XCTAssertTrue(pause.waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["strengthLabel"].exists)
         let stick = app.otherElements["joystick"]
+        XCTAssertTrue(stick.exists)
         if stick.exists {
             let center = stick.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
             let right = stick.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5))
             center.press(forDuration: 0.1, thenDragTo: right)
         }
+        let gameplay = XCTAttachment(screenshot: app.screenshot())
+        gameplay.name = "Gameplay"
+        gameplay.lifetime = .keepAlways
+        add(gameplay)
         pause.tap()
         let resume = app.buttons["resumeButton"]
         XCTAssertTrue(resume.waitForExistence(timeout: 3))
