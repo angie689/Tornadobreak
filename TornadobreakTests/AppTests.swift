@@ -1,6 +1,7 @@
-import XCTest
 import SpriteKit
 import TornadoCore
+import XCTest
+
 @testable import Tornadobreak
 
 final class AppTests: XCTestCase {
@@ -15,6 +16,25 @@ final class AppTests: XCTestCase {
             scene.update(1)
             scene.update(1.05)
             XCTAssertGreaterThan(scene.simulation.position.x, start.x)
+            scene.stop()
+        }
+    }
+    func testPauseFreezesSimulationAndResumeResetsClock() async {
+        await MainActor.run {
+            let session = GameSession(level: Level.all[0], store: ProgressStore())
+            let scene = session.scene
+            scene.update(1)
+            scene.update(1.05)
+            let elapsed = scene.simulation.elapsed
+            session.setPaused(true)
+            scene.update(100)
+            scene.update(101)
+            XCTAssertEqual(scene.simulation.elapsed, elapsed)
+            session.setPaused(false)
+            scene.update(102)
+            XCTAssertEqual(scene.simulation.elapsed, elapsed)
+            scene.update(102.02)
+            XCTAssertGreaterThan(scene.simulation.elapsed, elapsed)
             scene.stop()
         }
     }

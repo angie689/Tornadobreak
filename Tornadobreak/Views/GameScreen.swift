@@ -1,5 +1,5 @@
-import SwiftUI
 import SpriteKit
+import SwiftUI
 import TornadoCore
 
 struct GameScreen: View {
@@ -43,7 +43,9 @@ private struct GameRunView: View {
     private var hud: some View {
         VStack(spacing: 10) {
             HStack {
-                Button { session.setPaused(true) } label: {
+                Button {
+                    session.setPaused(true)
+                } label: {
                     Image(systemName: "pause.fill").font(.headline).frame(width: 44, height: 44)
                         .background(.white.opacity(0.08), in: Circle())
                 }.accessibilityLabel("Pause").accessibilityIdentifier("pauseButton")
@@ -64,7 +66,8 @@ private struct GameRunView: View {
                     HStack {
                         Text("\(session.simulation.wind) mph").font(.headline).monospacedDigit()
                         Spacer()
-                        Text("\(Int(session.simulation.elapsed))s").font(.caption).monospacedDigit().foregroundStyle(Theme.muted)
+                        Text("\(Int(session.simulation.elapsed))s").font(.caption).monospacedDigit().foregroundStyle(
+                            Theme.muted)
                     }
                     ProgressView(value: session.simulation.energy, total: 100).tint(Theme.mint)
                         .accessibilityLabel("Energy \(Int(session.simulation.energy)) percent")
@@ -95,7 +98,11 @@ private struct GameRunView: View {
             .padding(.horizontal, 12).padding(.top, 5)
     }
     private var weatherColor: Color {
-        switch session.simulation.weather { case .warm: return Theme.mint; case .mixed: return .yellow; case .dry: return .cyan }
+        switch session.simulation.weather {
+        case .warm: return Theme.mint
+        case .mixed: return .yellow
+        case .dry: return .cyan
+        }
     }
     private var controls: some View {
         VStack(spacing: 8) {
@@ -128,15 +135,18 @@ private struct GameRunView: View {
     }
     private var miniMap: some View {
         Canvas { context, size in
-            let scaleX = size.width / Level.worldSize.x, scaleY = size.height / Level.worldSize.y
+            let scaleX = size.width / Level.worldSize.x
+            let scaleY = size.height / Level.worldSize.y
             for zone in session.level.zones {
-                let rect = CGRect(x: (zone.center.x - zone.radius) * scaleX,
-                                  y: (Level.worldSize.y - zone.center.y - zone.radius) * scaleY,
-                                  width: zone.radius * 2 * scaleX, height: zone.radius * 2 * scaleY)
+                let rect = CGRect(
+                    x: (zone.center.x - zone.radius) * scaleX,
+                    y: (Level.worldSize.y - zone.center.y - zone.radius) * scaleY,
+                    width: zone.radius * 2 * scaleX, height: zone.radius * 2 * scaleY)
                 context.fill(Path(ellipseIn: rect), with: .color((zone.favorable ? Theme.mint : .blue).opacity(0.24)))
             }
             let position = session.simulation.position
-            let dot = CGRect(x: position.x * scaleX - 3, y: (Level.worldSize.y - position.y) * scaleY - 3, width: 6, height: 6)
+            let dot = CGRect(
+                x: position.x * scaleX - 3, y: (Level.worldSize.y - position.y) * scaleY - 3, width: 6, height: 6)
             context.fill(Path(ellipseIn: dot), with: .color(.white))
         }.frame(width: 80, height: 110).background(Theme.background.opacity(0.9))
             .clipShape(RoundedRectangle(cornerRadius: 9))
@@ -162,8 +172,11 @@ private struct GameRunView: View {
                 .font(.system(size: 50)).foregroundStyle(summary.won ? Theme.mint : Theme.muted)
             Text(summary.won ? "Outbreak complete" : "Tornado dissipated")
                 .font(.title2.bold()).accessibilityIdentifier("resultTitle")
-            Text(summary.won ? "\(session.level.name) · all objectives complete" : "Find warm, moist air to keep your energy up.")
-                .font(.subheadline).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
+            Text(
+                summary.won
+                    ? "\(session.level.name) · all objectives complete" : "Find warm, moist air to keep your energy up."
+            )
+            .font(.subheadline).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
             HStack(spacing: 20) {
                 stat("EF\(summary.peakEF)", "PEAK")
                 stat("\(summary.destroyed)", "DESTROYED")
@@ -171,8 +184,10 @@ private struct GameRunView: View {
             }.padding(.vertical, 10)
             Text("+\(summary.coins) TC earned").font(.title2.bold()).foregroundStyle(.yellow)
             if summary.won {
-                Text("Includes \(summary.completion) TC completion reward\n\(summary.firstCompletion ? "First completion · 100%" : "Replay · 25%")")
-                    .font(.caption).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
+                Text(
+                    "Includes \(summary.completion) TC completion reward\n\(summary.firstCompletion ? "First completion · 100%" : "Replay · 25%")"
+                )
+                .font(.caption).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
             }
             Button("Choose level") { dismiss() }.buttonStyle(PrimaryButtonStyle())
             Button("Play again") { replay() }.buttonStyle(SecondaryButtonStyle())
@@ -210,19 +225,25 @@ private struct Joystick: View {
                 .overlay(Circle().stroke(Theme.mint.opacity(0.6), lineWidth: 1.5))
                 .offset(offset)
         }.frame(width: 132, height: 132).contentShape(Circle())
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    let dx = value.location.x - 66, dy = value.location.y - 66
-                    let distance = hypot(dx, dy), maximum: CGFloat = 45
-                    let scale = distance > maximum ? maximum / distance : 1
-                    offset = CGSize(width: dx * scale, height: dy * scale)
-                    move(Point(Double(offset.width / maximum), -Double(offset.height / maximum)))
-                }
-                .onEnded { _ in offset = .zero; move(Point(0, 0)) })
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let dx = value.location.x - 66
+                        let dy = value.location.y - 66
+                        let distance = hypot(dx, dy)
+                        let maximum: CGFloat = 45
+                        let scale = distance > maximum ? maximum / distance : 1
+                        offset = CGSize(width: dx * scale, height: dy * scale)
+                        move(Point(Double(offset.width / maximum), -Double(offset.height / maximum)))
+                    }
+                    .onEnded { _ in
+                        offset = .zero
+                        move(Point(0, 0))
+                    }
+            )
             .onDisappear { move(Point(0, 0)) }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Steering thumbstick. Drag to move.")
             .accessibilityIdentifier("joystick")
     }
 }
-

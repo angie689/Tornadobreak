@@ -1,9 +1,15 @@
 import Foundation
 
 public enum Weather: String, Sendable {
-    case warm = "Warm & moist", mixed = "Mixed air", dry = "Cool & dry"
+    case warm = "Warm & moist"
+    case mixed = "Mixed air"
+    case dry = "Cool & dry"
     public var hint: String {
-        switch self { case .warm: return "Strengthening"; case .mixed: return "Slow growth"; case .dry: return "Losing energy" }
+        switch self {
+        case .warm: return "Strengthening"
+        case .mixed: return "Slow growth"
+        case .dry: return "Losing energy"
+        }
     }
 }
 
@@ -77,11 +83,15 @@ public struct Simulation {
         energy = min(100, max(0, energy + rate * dt))
         peakEF = max(peakEF, ef)
         emptyTime = energy <= 0 ? emptyTime + dt : 0
-        if emptyTime >= 8 { dissipated = true; return result }
+        if emptyTime >= 8 {
+            dissipated = true
+            return result
+        }
         for index in objects.indices where !objects[index].destroyed {
             let object = objects[index]
             guard position.distance(to: object.position) <= radius + 9,
-                  liftingPower >= object.kind.resistance else { continue }
+                liftingPower >= object.kind.resistance
+            else { continue }
             // Buildings take a little longer to break apart than trees and cars.
             let duration: Double = object.kind == .house || object.kind == .block ? 0.85 : 0.3
             objects[index].damage += dt / duration
@@ -109,10 +119,14 @@ public struct Simulation {
             for index in 0..<15 {
                 let angle = Double(index) * 2.39996
                 let distance = 15 + Double(index / 3) * 24
-                let point = Point(min(max(35, anchor.x + cos(angle) * distance), Level.worldSize.x - 35),
-                                  min(max(35, anchor.y + sin(angle) * distance), Level.worldSize.y - 35))
+                let point = Point(
+                    min(max(35, anchor.x + cos(angle) * distance), Level.worldSize.x - 35),
+                    min(max(35, anchor.y + sin(angle) * distance), Level.worldSize.y - 35))
                 let kind: ObjectKind
                 switch index % 5 {
+                case 1 where level.id == "chicago": kind = .car
+                case 2 where level.id == "chicago": kind = .house
+                case 3 where level.id == "chicago": kind = .block
                 case 0, 1: kind = .tree
                 case 2: kind = .car
                 case 3: kind = .house

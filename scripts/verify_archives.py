@@ -3,6 +3,7 @@
 import io
 import plistlib
 import sys
+import struct
 import zipfile
 from pathlib import Path
 
@@ -16,9 +17,13 @@ def verify_ipa(data):
         assert info["CFBundleShortVersionString"] == "1.0"
         assert info["CFBundlePackageType"] == "APPL"
         assert info.get("MinimumOSVersion") == "16.0"
-        executable = ipa.read("Payload/Tornadobreak.app/" + info["CFBundleExecutable"])
+        assert "iPhoneOS" in info.get("CFBundleSupportedPlatforms", []), "Expected a device build"
+        binary_path = "Payload/Tornadobreak.app/" + info["CFBundleExecutable"]
+        executable = ipa.read(binary_path)
+        assert (ipa.getinfo(binary_path).external_attr >> 16) & 0o111, "App binary is not executable"
         assert len(executable) > 10000, "Missing app binary"
-        assert executable[:4] in (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe", b"\xca\xfe\xba\xbf"), "Not a Mach-O executable"
+        assert executable[:4] == b"\xcf\xfa\xed\xfe", "Expected a 64-bit Mach-O executable"
+        assert struct.unpack_from("<I", executable, 4)[0] == 0x0100000C, "Expected arm64 iPhone binary"
         assert not any("_CodeSignature/" in name for name in ipa.namelist()), "Expected an unsigned app"
         assert not any(name.endswith("embedded.mobileprovision") for name in ipa.namelist())
 

@@ -7,41 +7,57 @@ struct MenuView: View {
         NavigationStack {
             ZStack {
                 Theme.background.ignoresSafeArea()
-                RadialGradient(colors: [Theme.mint.opacity(0.12), .clear], center: .topTrailing,
-                               startRadius: 10, endRadius: 490).ignoresSafeArea()
-                VStack(spacing: 0) {
-                    HStack {
-                        Text("TORNADOBREAK").font(.caption.weight(.heavy)).tracking(3).foregroundStyle(Theme.muted)
-                        Spacer(); CoinPill(amount: store.progress.coins)
-                    }
-                    Spacer(minLength: 26)
-                    ZStack {
-                        ForEach(0..<4) { index in
-                            Circle().trim(from: 0.08, to: 0.86)
-                                .stroke(Theme.mint.opacity(0.12 + Double(index) * 0.07), style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                                .frame(width: CGFloat(100 + index * 37), height: CGFloat(100 + index * 37))
-                                .rotationEffect(.degrees(Double(index) * 65 - 20))
-                        }
-                        Image(systemName: "hurricane").font(.system(size: 65, weight: .light)).foregroundStyle(Theme.mint)
-                    }.frame(height: 240).accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Small funnel.\nBig outbreak.")
-                            .font(.system(size: 43, weight: .bold, design: .rounded)).tracking(-1.5)
-                            .minimumScaleFactor(0.8)
-                        Text("Chase warm air. Build your strength.\nLeave a path through three real cities.")
-                            .font(.subheadline).foregroundStyle(Theme.muted).lineSpacing(4)
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                    Spacer(minLength: 30)
-                    NavigationLink { LevelSelectView() } label: {
-                        Label("Play", systemImage: "play.fill")
-                    }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("playButton")
-                    NavigationLink { UpgradesView() } label: {
-                        Label("Upgrades", systemImage: "slider.horizontal.3")
-                    }.buttonStyle(SecondaryButtonStyle()).padding(.top, 12)
-                    Text("V1.0  ·  SINGLE PLAYER  ·  SAVED ON THIS DEVICE")
-                        .font(.system(size: 9, weight: .semibold)).tracking(1)
-                        .foregroundStyle(Theme.muted).padding(.top, 25)
-                }.padding(24)
+                RadialGradient(
+                    colors: [Theme.mint.opacity(0.12), .clear], center: .topTrailing,
+                    startRadius: 10, endRadius: 490
+                ).ignoresSafeArea()
+                GeometryReader { geometry in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            HStack {
+                                Text("TORNADOBREAK").font(.caption.weight(.heavy)).tracking(3).foregroundStyle(
+                                    Theme.muted)
+                                Spacer()
+                                CoinPill(amount: store.progress.coins)
+                            }
+                            Spacer(minLength: 26)
+                            ZStack {
+                                ForEach(0..<4) { index in
+                                    Circle().trim(from: 0.08, to: 0.86)
+                                        .stroke(
+                                            Theme.mint.opacity(0.12 + Double(index) * 0.07),
+                                            style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                                        )
+                                        .frame(width: CGFloat(100 + index * 37), height: CGFloat(100 + index * 37))
+                                        .rotationEffect(.degrees(Double(index) * 65 - 20))
+                                }
+                                Image(systemName: "hurricane").font(.system(size: 65, weight: .light)).foregroundStyle(
+                                    Theme.mint)
+                            }.frame(height: 240).accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Small funnel.\nBig outbreak.")
+                                    .font(.system(size: 43, weight: .bold, design: .rounded)).tracking(-1.5)
+                                    .minimumScaleFactor(0.8)
+                                Text("Chase warm air. Build your strength.\nLeave a path through three real cities.")
+                                    .font(.subheadline).foregroundStyle(Theme.muted).lineSpacing(4)
+                            }.frame(maxWidth: .infinity, alignment: .leading)
+                            Spacer(minLength: 30)
+                            NavigationLink {
+                                LevelSelectView()
+                            } label: {
+                                Label("Play", systemImage: "play.fill")
+                            }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("playButton")
+                            NavigationLink {
+                                UpgradesView()
+                            } label: {
+                                Label("Upgrades", systemImage: "slider.horizontal.3")
+                            }.buttonStyle(SecondaryButtonStyle()).padding(.top, 12)
+                            Text("V1.0  ·  SINGLE PLAYER  ·  SAVED ON THIS DEVICE")
+                                .font(.system(size: 9, weight: .semibold)).tracking(1)
+                                .foregroundStyle(Theme.muted).padding(.top, 25)
+                        }.padding(24).frame(minHeight: geometry.size.height)
+                    }.scrollIndicators(.hidden)
+                }
             }
         }
     }
@@ -52,19 +68,30 @@ struct LevelSelectView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                HStack { Text("Choose your outbreak").font(.title2.bold()); Spacer() }
+                HStack {
+                    Text("Choose your outbreak").font(.title2.bold())
+                    Spacer()
+                }
                 Text("Three cities. Three objectives each. Upgrades carry into every run.")
                     .font(.subheadline).foregroundStyle(Theme.muted)
                 ForEach(Level.all) { level in
-                    NavigationLink { GameScreen(level: level, store: store) } label: {
+                    NavigationLink {
+                        GameScreen(level: level, store: store)
+                    } label: {
                         levelCard(level)
                     }.buttonStyle(.plain).accessibilityIdentifier("level-\(level.id)")
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     Label("How to play", systemImage: "hand.draw.fill").font(.headline)
-                    Text("Drag the thumbstick to steer. Green zones are warm and moist: stay there to grow. Blue zones weaken you. Pass close to objects to lift them.")
-                    Text("Finish all three objectives in one run. At zero energy, you have 8 seconds to reach better air. Pause whenever you need.")
-                    Text("Maps show real geography. Weather and object placements are designed for the game; they are not live data.")
+                    Text(
+                        "Drag the thumbstick to steer. Green zones are warm and moist: stay there to grow. Blue zones weaken you. Pass close to objects to lift them."
+                    )
+                    Text(
+                        "Finish all three objectives in one run. At zero energy, you have 8 seconds to reach better air. Pause whenever you need."
+                    )
+                    Text(
+                        "Maps show real geography. Weather and object placements are designed for the game; they are not live data."
+                    )
                 }.font(.footnote).foregroundStyle(Theme.muted).gamePanel()
                 Text("Coins and earned bonuses save immediately. An unfinished run restarts when you leave it.")
                     .font(.footnote).foregroundStyle(Theme.muted).padding(.horizontal, 4)
@@ -123,7 +150,8 @@ struct UpgradesView: View {
                 Spacer()
                 HStack(spacing: 5) {
                     ForEach(0..<Upgrade.maxRank, id: \.self) { index in
-                        Capsule().fill(index < rank ? Theme.mint : Color.white.opacity(0.12)).frame(width: 24, height: 6)
+                        Capsule().fill(index < rank ? Theme.mint : Color.white.opacity(0.12)).frame(
+                            width: 24, height: 6)
                     }
                 }.accessibilityLabel("Rank \(rank) of 3")
             }

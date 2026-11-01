@@ -3,7 +3,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 app="build/device/Build/Products/Release-iphoneos/Tornadobreak.app"
 test -d "$app"
+rm -rf build/package
 mkdir -p build/package/Payload dist
+rm -f dist/Tornadobreak.ipa dist/Tornadobreak-iPhone.zip
 cp -R "$app" build/package/Payload/
 # No provisioning profile or restricted entitlements: SideStore supplies the user's signature.
 rm -rf build/package/Payload/Tornadobreak.app/_CodeSignature

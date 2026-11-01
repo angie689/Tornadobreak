@@ -7,6 +7,6 @@ let package = Package(
     products: [.library(name: "TornadoCore", targets: ["TornadoCore"])],
     targets: [
         .target(name: "TornadoCore"),
-        .testTarget(name: "TornadoCoreTests", dependencies: ["TornadoCore"])
+        .testTarget(name: "TornadoCoreTests", dependencies: ["TornadoCore"]),
     ]
 )

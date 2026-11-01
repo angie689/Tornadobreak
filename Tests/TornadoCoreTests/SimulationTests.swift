@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import TornadoCore
 
 final class SimulationTests: XCTestCase {
@@ -46,6 +47,22 @@ final class SimulationTests: XCTestCase {
         _ = fast.step(delta: .nan, direction: Point(0, 0))
         XCTAssertEqual(fast.elapsed, before)
     }
+    func testHeavyBuildingsRequireStrengthAndOnlyPayOnce() {
+        let level = Level.all[2]
+        var sim = Simulation(level: level)
+        let block = sim.objects.first { $0.kind == .block }!
+        steer(&sim, to: block.position, steps: 80)
+        XCTAssertFalse(sim.objects[block.id].destroyed, "A weak funnel must not lift a block")
+        steer(&sim, to: level.start, steps: 80)
+        for _ in 0..<950 { _ = sim.step(delta: 0.1, direction: Point(0, 0)) }
+        var occurrences = 0
+        for _ in 0..<160 {
+            let result = sim.step(delta: 0.1, direction: vector(from: sim.position, to: block.position))
+            occurrences += result.destroyed.filter { $0 == block.id }.count
+        }
+        XCTAssertTrue(sim.objects[block.id].destroyed)
+        XCTAssertEqual(occurrences, 1)
+    }
     func testSuctionImprovesLiftWithoutChangingEF() {
         var progress = Progress()
         progress.upgrades[Upgrade.suction.rawValue] = 3
@@ -66,9 +83,12 @@ final class SimulationTests: XCTestCase {
                 if sim.energy < 55 {
                     target = level.start
                 } else if let next = sim.objects.filter({ !$0.destroyed && $0.kind.resistance <= sim.liftingPower })
-                    .min(by: { $0.position.distance(to: sim.position) < $1.position.distance(to: sim.position) }) {
+                    .min(by: { $0.position.distance(to: sim.position) < $1.position.distance(to: sim.position) })
+                {
                     target = next.position
-                } else { target = level.start }
+                } else {
+                    target = level.start
+                }
                 let result = sim.step(delta: 0.1, direction: vector(from: sim.position, to: target))
                 for id in result.destroyed { destroyedKinds.insert(sim.objects[id].kind) }
             }

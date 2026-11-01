@@ -1,4 +1,5 @@
 import XCTest
+
 @testable import TornadoCore
 
 final class ProgressTests: XCTestCase {

@@ -30,7 +30,8 @@ final class GameSession: ObservableObject {
     }()
 
     init(level: Level, store: ProgressStore) {
-        self.level = level; self.store = store
+        self.level = level
+        self.store = store
         simulation = Simulation(level: level, progress: store.progress)
         coins = store.progress.coins
         wasCompleted = store.progress.completedLevels.contains(level.id)
@@ -45,9 +46,10 @@ final class GameSession: ObservableObject {
         }
         if result.finished || simulation.dissipated {
             scene.setDirection(Point(0, 0))
-            summary = RunSummary(won: result.finished, coins: runCoins, completion: reward.completion,
-                                 firstCompletion: !wasCompleted, destroyed: simulation.destroyedCount,
-                                 peakEF: simulation.peakEF, seconds: Int(simulation.elapsed))
+            summary = RunSummary(
+                won: result.finished, coins: runCoins, completion: reward.completion,
+                firstCompletion: !wasCompleted, destroyed: simulation.destroyedCount,
+                peakEF: simulation.peakEF, seconds: Int(simulation.elapsed))
             scene.isPaused = true
         }
     }

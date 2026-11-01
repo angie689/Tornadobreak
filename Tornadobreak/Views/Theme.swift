@@ -1,6 +1,6 @@
 import SwiftUI
 
- enum Theme {
+enum Theme {
     static let background = Color(red: 0.035, green: 0.055, blue: 0.08)
     static let panel = Color(red: 0.08, green: 0.11, blue: 0.15)
     static let mint = Color(red: 0.42, green: 0.94, blue: 0.77)
@@ -20,7 +20,8 @@ struct SecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(.headline).frame(maxWidth: .infinity).padding(.vertical, 17)
             .foregroundStyle(.white)
-            .background(Color.white.opacity(configuration.isPressed ? 0.14 : 0.07), in: RoundedRectangle(cornerRadius: 18))
+            .background(
+                Color.white.opacity(configuration.isPressed ? 0.14 : 0.07), in: RoundedRectangle(cornerRadius: 18))
     }
 }
 struct CoinPill: View {
