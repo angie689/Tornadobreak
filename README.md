@@ -60,11 +60,25 @@ supports it. SideStore's setup/pairing requirements, app limits, compatibility,
 and signing refresh rules still apply; initial setup may require a computer.
 Actual installation must be checked on a physical iPhone. Uninstalling may erase saves.
 
-The macOS workflow runs core tests and native simulator tests, builds an arm64
-Release app without signing, creates `Payload/Tornadobreak.app` inside an IPA,
-then wraps it in a download ZIP. Both archives undergo CRC checks, and a Python
-validator checks the nested IPA, bundle metadata, and native Mach-O executable
-**before upload**. Failed builds/tests do not publish an IPA.
+The workflow runs two jobs in parallel on macOS 15 Intel with Xcode 16.4:
+
+- **Core tests and iPhone ZIP** runs the complete core gameplay/economy suite,
+  builds the unsigned arm64 Release app, and packages and verifies both archives.
+  Compiled core tests are cached by compiler, architecture, and source content;
+  the tests still execute on every build.
+- **Native app and UI checks** runs app integration and UI tests on an installed
+  simulator matching Xcode's iOS SDK. Boot overlaps test compilation. Individual
+  tests and simulator steps have time limits so a stalled simulator fails promptly.
+  Core tests are not compiled and run a second time inside the simulator app.
+
+The **Tornadobreak-iPhone** ZIP becomes downloadable when its own job passes;
+there is no wait for simulator UI automation. This artifact has passed core tests,
+device compilation, and archive checks, but **both jobs must be green to call the
+whole build verified**. A simulator failure remains visible and fails the workflow.
+Both archives undergo CRC checks; the validator checks the nested IPA, bundle
+metadata, and native Mach-O executable before upload. Gameplay, Release compiler
+settings, signing, and archive validation are unchanged. Documentation-only pushes
+skip automatic builds; manual builds remain available.
 
 ## Build and test locally
 
@@ -90,7 +104,8 @@ xcodebuild build -project Tornadobreak.xcodeproj -scheme Tornadobreak \
 scripts/package_ipa.sh
 ```
 
-Use an installed simulator name. The CI workflow chooses one automatically.
+Use an installed simulator name. CI chooses an installed iPhone on the active SDK's
+runtime; it does not choose a newer, unrelated runtime or download another one.
 Core tests run with Swift 5.9+ on Linux or macOS. The app and UI tests require
 Apple's SDKs. Tests cover growth, weather loss, dissipation, controls/bounds,
 upgrades, completion of all three levels, one-time rewards, replay payout,

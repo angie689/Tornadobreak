@@ -2,57 +2,40 @@ name: Build iPhone game
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
+env:
+  DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+  HOMEBREW_NO_AUTO_UPDATE: '1'
 jobs:
   build:
-    name: Test and package unsigned IPA
+    name: Core tests and iPhone ZIP
     runs-on: macos-15-intel
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Show Xcode and install project generator
+      - name: Prepare project
         run: |
           xcodebuild -version
-          brew install xcodegen
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
           xcodegen generate
+      - name: Cache compiled core tests
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: tornado-core-${{ runner.os }}-${{ runner.arch }}-xcode16.4-${{ hashFiles('Package.swift', 'Sources/TornadoCore/**/*.swift', 'Tests/TornadoCoreTests/**/*.swift') }}
       - name: Test deterministic gameplay and economy
         run: swift test
-      - name: Select an available iPhone simulator
-        id: simulator
-        run: |
-          python3 - <<'PY'
-          import json, os, subprocess
-          devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
-          phones = [d for runtime, group in devices.items() if 'iOS' in runtime for d in group if 'iPhone' in d['name']]
-          assert phones, 'No iPhone simulator installed'
-          phones.sort(key=lambda d: ('Pro Max' in d['name'], d['name']), reverse=True)
-          device = phones[0]
-          print('Testing on', device['name'], device['udid'])
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write('id=' + device['udid'] + '\n')
-          PY
-      - name: Build and test native app on iPhone simulator
-        run: |
-          set -o pipefail
-          mkdir -p build
-          xcodebuild test -project Tornadobreak.xcodeproj -scheme Tornadobreak \
-            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
-            -derivedDataPath build/simulator -resultBundlePath build/Tests.xcresult \
-            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/simulator.log
-      - name: Export simulator screenshots
-        if: always()
-        run: |
-          if [ -d build/Tests.xcresult ]; then
-            xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots || true
-          fi
       - name: Build unsigned iPhone application
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild build -project Tornadobreak.xcodeproj -scheme Tornadobreak \
             -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
@@ -67,7 +50,59 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
-      - name: Upload test results and build logs
+      - name: Upload device build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iPhone-build-log
+          path: build/device.log
+          if-no-files-found: ignore
+          retention-days: 14
+  simulator:
+    name: Native app and UI checks
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare project
+        run: |
+          xcodebuild -version
+          if ! command -v xcodegen >/dev/null; then brew install xcodegen; fi
+          xcodegen generate
+      - name: Select a simulator matching the active Xcode SDK
+        id: simulator
+        timeout-minutes: 3
+        run: python3 scripts/select_simulator.py
+      - name: Build native app and tests while simulator boots
+        timeout-minutes: 5
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild build-for-testing -project Tornadobreak.xcodeproj -scheme Tornadobreak \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
+            -destination-timeout 30 -derivedDataPath build/simulator \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/simulator-build.log
+      - name: Wait for simulator boot
+        timeout-minutes: 3
+        run: xcrun simctl bootstatus '${{ steps.simulator.outputs.id }}' -b
+      - name: Run native app and UI tests
+        timeout-minutes: 5
+        run: |
+          set -o pipefail
+          xcodebuild test-without-building -project Tornadobreak.xcodeproj -scheme Tornadobreak \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
+            -destination-timeout 30 -derivedDataPath build/simulator \
+            -resultBundlePath build/Tests.xcresult -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 120 \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/simulator-tests.log
+      - name: Export simulator screenshots
+        if: always()
+        timeout-minutes: 1
+        run: |
+          if [ -d build/Tests.xcresult ]; then
+            xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/screenshots || true
+          fi
+      - name: Upload test results and simulator logs
         if: always()
         uses: actions/upload-artifact@v4
         with:

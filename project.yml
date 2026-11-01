@@ -38,7 +38,7 @@ targets:
   TornadobreakTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [TornadobreakTests, Tests/TornadoCoreTests]
+    sources: [TornadobreakTests]
     dependencies:
       - target: Tornadobreak
       - package: TornadoCore
