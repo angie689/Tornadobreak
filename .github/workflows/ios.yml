@@ -1,0 +1,73 @@
+name: Build iPhone game
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Test and package unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode and install project generator
+        run: |
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen generate
+      - name: Test deterministic gameplay and economy
+        run: swift test
+      - name: Select an available iPhone simulator
+        id: simulator
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
+          phones = [d for runtime, group in devices.items() if 'iOS' in runtime for d in group if 'iPhone' in d['name']]
+          assert phones, 'No iPhone simulator installed'
+          phones.sort(key=lambda d: ('Pro Max' in d['name'], d['name']), reverse=True)
+          device = phones[0]
+          print('Testing on', device['name'], device['udid'])
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('id=' + device['udid'] + '\n')
+          PY
+      - name: Build and test native app on iPhone simulator
+        run: |
+          set -o pipefail
+          mkdir -p build
+          xcodebuild test -project Tornadobreak.xcodeproj -scheme Tornadobreak \
+            -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
+            -derivedDataPath build/simulator -resultBundlePath build/Tests.xcresult \
+            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/simulator.log
+      - name: Build unsigned iPhone application
+        run: |
+          set -o pipefail
+          xcodebuild build -project Tornadobreak.xcodeproj -scheme Tornadobreak \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath build/device CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' 2>&1 | tee build/device.log
+      - name: Package and verify IPA and download ZIP
+        run: scripts/package_ipa.sh
+      - name: Upload iPhone ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tornadobreak-iPhone
+          path: dist/Tornadobreak-iPhone.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Upload test results and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-test-results
+          path: |
+            build/*.log
+            build/Tests.xcresult
+          if-no-files-found: ignore
+          retention-days: 14
