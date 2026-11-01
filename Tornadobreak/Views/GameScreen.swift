@@ -40,62 +40,62 @@ private struct GameRunView: View {
         .onDisappear { session.scene.stop() }
         .persistentSystemOverlays(.hidden)
     }
+    // Landscape HUD: a single compact strip keeps the middle of the map visible.
     private var hud: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Button {
-                    session.setPaused(true)
-                } label: {
-                    Image(systemName: "pause.fill").font(.headline).frame(width: 44, height: 44)
-                        .background(.white.opacity(0.08), in: Circle())
-                }.accessibilityLabel("Pause").accessibilityIdentifier("pauseButton")
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(session.level.name).font(.headline)
-                    Text(session.level.difficulty.uppercased()).font(.system(size: 9, weight: .bold))
-                        .tracking(2).foregroundStyle(Theme.muted)
-                }
-                Spacer()
-                CoinPill(amount: session.coins)
+        HStack(alignment: .center, spacing: 13) {
+            Button {
+                session.setPaused(true)
+            } label: {
+                Image(systemName: "pause.fill")
+                    .font(.headline).frame(width: 44, height: 44)
+                    .background(.white.opacity(0.08), in: Circle())
             }
-            HStack(spacing: 12) {
-                Text("EF\(session.simulation.ef)")
-                    .font(.system(size: 32, weight: .heavy, design: .rounded))
-                    .foregroundStyle(Theme.mint).frame(width: 74)
-                    .accessibilityIdentifier("strengthLabel")
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack {
-                        Text("\(session.simulation.wind) mph").font(.headline).monospacedDigit()
-                        Spacer()
-                        Text("\(Int(session.simulation.elapsed))s").font(.caption).monospacedDigit().foregroundStyle(
-                            Theme.muted)
-                    }
-                    ProgressView(value: session.simulation.energy, total: 100).tint(Theme.mint)
-                        .accessibilityLabel("Energy \(Int(session.simulation.energy)) percent")
-                    HStack(spacing: 5) {
-                        Circle().fill(weatherColor).frame(width: 6, height: 6)
-                        Text("\(session.simulation.weather.rawValue) · \(session.simulation.weather.hint)")
-                            .font(.system(size: 10, weight: .semibold)).foregroundStyle(weatherColor)
-                            .lineLimit(1).minimumScaleFactor(0.7)
-                    }
+            .accessibilityLabel("Pause").accessibilityIdentifier("pauseButton")
+            VStack(alignment: .leading, spacing: 2) {
+                Text(session.level.name).font(.subheadline.bold()).lineLimit(1)
+                Text(session.level.difficulty.uppercased())
+                    .font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(Theme.muted)
+            }
+            .frame(maxWidth: 140, alignment: .leading)
+            Text("EF\(session.simulation.ef)")
+                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                .foregroundStyle(Theme.mint)
+                .accessibilityIdentifier("strengthLabel")
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 10) {
+                    Text("\(session.simulation.wind) mph").font(.subheadline.bold()).monospacedDigit()
+                    Text("\(Int(session.simulation.elapsed))s")
+                        .font(.caption).monospacedDigit().foregroundStyle(Theme.muted)
+                }
+                ProgressView(value: session.simulation.energy, total: 100).tint(Theme.mint)
+                HStack(spacing: 4) {
+                    Circle().fill(weatherColor).frame(width: 6, height: 6)
+                    Text(session.simulation.weather.rawValue)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(weatherColor)
                 }
             }
-            Divider().overlay(.white.opacity(0.1))
-            VStack(spacing: 5) {
+            .frame(maxWidth: 145)
+            VStack(alignment: .leading, spacing: 3) {
                 ForEach(session.level.quests) { quest in
                     let done = session.simulation.achieved.contains(quest.kind)
-                    HStack(spacing: 7) {
+                    HStack(spacing: 5) {
                         Image(systemName: done ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(done ? Theme.mint : Theme.muted)
-                        Text(quest.title)
-                        Spacer()
+                        Text(quest.title).lineLimit(1).minimumScaleFactor(0.7)
+                        Spacer(minLength: 2)
                         Text("\(min(quest.target, session.simulation.value(for: quest)))/\(quest.target)")
                             .foregroundStyle(Theme.muted).monospacedDigit()
-                    }.font(.system(size: 11, weight: .medium))
+                    }
+                    .font(.system(size: 10, weight: .medium))
                 }
             }
-        }.padding(14)
-            .background(Theme.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 22))
-            .padding(.horizontal, 12).padding(.top, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            CoinPill(amount: session.coins)
+        }
+        .padding(10)
+        .background(Theme.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 18))
+        .padding(.horizontal, 12).padding(.top, 3)
     }
     private var weatherColor: Color {
         switch session.simulation.weather {
@@ -150,7 +150,7 @@ private struct GameRunView: View {
             let dot = CGRect(
                 x: position.x * scaleX - 3, y: (Level.worldSize.y - position.y) * scaleY - 3, width: 6, height: 6)
             context.fill(Path(ellipseIn: dot), with: .color(.white))
-        }.frame(width: 80, height: 110).background(Theme.background.opacity(0.9))
+        }.frame(width: 94, height: 86).background(Theme.background.opacity(0.9))
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.22)))
             .accessibilityLabel("Weather overview. Green zones strengthen the tornado.")

@@ -13,49 +13,67 @@ struct MenuView: View {
                 ).ignoresSafeArea()
                 GeometryReader { geometry in
                     ScrollView {
-                        VStack(spacing: 0) {
-                            HStack {
-                                Text("TORNADOBREAK").font(.caption.weight(.heavy)).tracking(3).foregroundStyle(
-                                    Theme.muted)
-                                Spacer()
-                                CoinPill(amount: store.progress.coins)
-                            }
-                            Spacer(minLength: 26)
-                            ZStack {
-                                ForEach(0..<4) { index in
-                                    Circle().trim(from: 0.08, to: 0.86)
-                                        .stroke(
-                                            Theme.mint.opacity(0.12 + Double(index) * 0.07),
-                                            style: StrokeStyle(lineWidth: 7, lineCap: .round)
-                                        )
-                                        .frame(width: CGFloat(100 + index * 37), height: CGFloat(100 + index * 37))
-                                        .rotationEffect(.degrees(Double(index) * 65 - 20))
+                        HStack(alignment: .center, spacing: 32) {
+                            VStack(spacing: 12) {
+                                HStack {
+                                    Text("TORNADOBREAK")
+                                        .font(.caption.weight(.heavy)).tracking(3)
+                                        .foregroundStyle(Theme.muted)
+                                    Spacer()
                                 }
-                                Image(systemName: "hurricane").font(.system(size: 65, weight: .light)).foregroundStyle(
-                                    Theme.mint)
-                            }.frame(height: 240).accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("Small funnel.\nBig outbreak.")
-                                    .font(.system(size: 43, weight: .bold, design: .rounded)).tracking(-1.5)
-                                    .minimumScaleFactor(0.8)
-                                Text("Chase warm air. Build your strength.\nLeave a path through three real cities.")
-                                    .font(.subheadline).foregroundStyle(Theme.muted).lineSpacing(4)
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                            Spacer(minLength: 30)
-                            NavigationLink {
-                                LevelSelectView()
-                            } label: {
-                                Label("Play", systemImage: "play.fill")
-                            }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("playButton")
-                            NavigationLink {
-                                UpgradesView()
-                            } label: {
-                                Label("Upgrades", systemImage: "slider.horizontal.3")
-                            }.buttonStyle(SecondaryButtonStyle()).padding(.top, 12)
-                            Text("V1.0  ·  SINGLE PLAYER  ·  SAVED ON THIS DEVICE")
-                                .font(.system(size: 9, weight: .semibold)).tracking(1)
-                                .foregroundStyle(Theme.muted).padding(.top, 25)
-                        }.padding(24).frame(minHeight: geometry.size.height)
+                                ZStack {
+                                    ForEach(0..<4) { index in
+                                        Circle().trim(from: 0.08, to: 0.86)
+                                            .stroke(
+                                                Theme.mint.opacity(0.12 + Double(index) * 0.07),
+                                                style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                                            )
+                                            .frame(
+                                                width: CGFloat(80 + index * 30),
+                                                height: CGFloat(80 + index * 30)
+                                            )
+                                            .rotationEffect(.degrees(Double(index) * 65 - 20))
+                                    }
+                                    Image(systemName: "hurricane")
+                                        .font(.system(size: 58, weight: .light))
+                                        .foregroundStyle(Theme.mint)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 190)
+                                .accessibilityHidden(true)
+                            }
+                            .frame(maxWidth: .infinity)
+                            VStack(alignment: .leading, spacing: 11) {
+                                HStack {
+                                    Spacer()
+                                    CoinPill(amount: store.progress.coins)
+                                }
+                                Text("Small funnel. Big outbreak.")
+                                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                                    .tracking(-1).minimumScaleFactor(0.8)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text("Chase warm air. Build your strength. Leave a path through three real cities.")
+                                    .font(.footnote).foregroundStyle(Theme.muted)
+                                NavigationLink {
+                                    LevelSelectView()
+                                } label: {
+                                    Label("Play", systemImage: "play.fill")
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                                .accessibilityIdentifier("playButton")
+                                NavigationLink {
+                                    UpgradesView()
+                                } label: {
+                                    Label("Upgrades", systemImage: "slider.horizontal.3")
+                                }
+                                .buttonStyle(SecondaryButtonStyle())
+                                Text("V1.0  ·  SINGLE PLAYER  ·  SAVED ON THIS DEVICE")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundStyle(Theme.muted)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.horizontal, 26).padding(.vertical, 14)
+                        .frame(minHeight: geometry.size.height)
                     }.scrollIndicators(.hidden)
                 }
             }

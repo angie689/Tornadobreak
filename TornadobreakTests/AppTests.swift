@@ -8,7 +8,7 @@ final class AppTests: XCTestCase {
     func testObjectsVisiblyLiftBeforeDestruction() async throws {
         try await MainActor.run {
             let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
-            let view = SKView(frame: CGRect(x: 0, y: 0, width: 414, height: 896))
+            let view = SKView(frame: CGRect(x: 0, y: 0, width: 896, height: 414))
             view.presentScene(scene)
             defer { scene.stop() }
             let target = try XCTUnwrap(scene.simulation.objects.first { $0.kind == .tree })
@@ -33,10 +33,25 @@ final class AppTests: XCTestCase {
             XCTAssertTrue(lifted)
         }
     }
+    func testCustomCarAndTreeArtIsBundled() async {
+        await MainActor.run {
+            for name in ["CarGray", "CarBlue", "CarRed", "CarWhite", "Tree"] {
+                XCTAssertNotNil(UIImage(named: name), "Missing sprite: \(name)")
+            }
+        }
+    }
+    func testOnlyLandscapeOrientationsAreSupported() {
+        let orientations = Bundle(for: TornadoScene.self)
+            .object(forInfoDictionaryKey: "UISupportedInterfaceOrientations") as? [String]
+        XCTAssertEqual(
+            Set(orientations ?? []),
+            Set(["UIInterfaceOrientationLandscapeLeft", "UIInterfaceOrientationLandscapeRight"])
+        )
+    }
     func testSceneBuildsAndUpdatesActualTornado() async {
         await MainActor.run {
             let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
-            let view = SKView(frame: CGRect(x: 0, y: 0, width: 414, height: 896))
+            let view = SKView(frame: CGRect(x: 0, y: 0, width: 896, height: 414))
             view.presentScene(scene)
             XCTAssertGreaterThan(scene.children.count, 4)
             let start = scene.simulation.position

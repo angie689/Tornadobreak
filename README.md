@@ -1,8 +1,8 @@
 # Tornadobreak
 
 A small native iPhone tornado game inspired by Hurricane Outbreak. SwiftUI menus,
-SpriteKit gameplay, and Apple MapKit street-map snapshots. iOS 16+, portrait,
-designed around the 414 × 896 point iPhone 11 Pro Max screen.
+SpriteKit gameplay, and Apple MapKit street-map snapshots. iOS 16+, landscape-only,
+designed around the iPhone 11 Pro Max in either landscape orientation.
 
 ## Play
 
@@ -115,8 +115,9 @@ consistency, and menu/pause navigation.
 ## Small by design
 
 No accounts, ads, shops, multiplayer, analytics, paid maps, or additional currencies.
-There is no real-time fluid simulation: the tornado uses six animated arcs and a
-small capped debris burst, with no fragment physics. There are 120 destructibles
+Cars and trees use custom, transparent player-designed sprite art. Houses and the tornado
+keep their original visuals. There is no real-time fluid simulation: the tornado uses six
+animated arcs and a small capped debris burst, with no fragment physics. There are 120 destructibles
 per level and the HUD refreshes at 10 Hz. Sound, haptics, run resumption after
 termination, and additional maps are outside version 1.0.
 

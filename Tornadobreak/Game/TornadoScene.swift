@@ -24,7 +24,7 @@ final class TornadoScene: SKScene {
 
     init(level: Level, progress: TornadoCore.Progress) {
         simulation = Simulation(level: level, progress: progress)
-        super.init(size: CGSize(width: 414, height: 896))
+        super.init(size: CGSize(width: 896, height: 414))
         scaleMode = .resizeFill
         backgroundColor = UIColor(red: 0.06, green: 0.10, blue: 0.13, alpha: 1)
     }
@@ -122,31 +122,26 @@ final class TornadoScene: SKScene {
             node.position = CGPoint(x: object.position.x, y: object.position.y)
             switch object.kind {
             case .tree:
-                let shadow = SKShapeNode(ellipseOf: CGSize(width: 25, height: 18))
+                let shadow = SKShapeNode(ellipseOf: CGSize(width: 25, height: 17))
                 shadow.fillColor = .black.withAlphaComponent(0.25)
                 shadow.strokeColor = .clear
                 shadow.position = CGPoint(x: 4, y: -5)
                 node.addChild(shadow)
-                let tree = SKShapeNode(circleOfRadius: 11)
-                tree.fillColor = UIColor(red: 0.26, green: 0.52, blue: 0.39, alpha: 1)
-                tree.strokeColor = UIColor.systemMint.withAlphaComponent(0.35)
+                let tree = SKSpriteNode(imageNamed: "Tree")
+                tree.size = CGSize(width: 28, height: 28)
                 node.addChild(tree)
-                let leaf = SKShapeNode(circleOfRadius: 5)
-                leaf.position = CGPoint(x: -3, y: 3)
-                leaf.fillColor = .white.withAlphaComponent(0.12)
-                leaf.strokeColor = .clear
-                node.addChild(leaf)
             case .car:
-                let car = SKShapeNode(rectOf: CGSize(width: 12, height: 23), cornerRadius: 3)
-                car.fillColor = object.id % 2 == 0 ? .systemYellow : .systemCyan
-                car.strokeColor = .black.withAlphaComponent(0.5)
-                car.lineWidth = 2
+                let shadow = SKShapeNode(ellipseOf: CGSize(width: 13, height: 23))
+                shadow.fillColor = .black.withAlphaComponent(0.28)
+                shadow.strokeColor = .clear
+                shadow.position = CGPoint(x: 2, y: -3)
+                node.addChild(shadow)
+                let carAssets = ["CarGray", "CarBlue", "CarRed", "CarWhite"]
+                let car = SKSpriteNode(imageNamed: carAssets[object.id % carAssets.count])
+                // The art faces right. Rotate it so vehicles face north on the map.
+                car.size = CGSize(width: 24, height: 14)
+                car.zRotation = .pi / 2
                 node.addChild(car)
-                let glass = SKShapeNode(rectOf: CGSize(width: 8, height: 7), cornerRadius: 1)
-                glass.fillColor = UIColor(white: 0.12, alpha: 1)
-                glass.strokeColor = .clear
-                glass.position.y = 2
-                node.addChild(glass)
             case .house, .block:
                 let big = object.kind == .block
                 let body = SKShapeNode(rectOf: CGSize(width: big ? 37 : 26, height: big ? 44 : 29), cornerRadius: 3)
