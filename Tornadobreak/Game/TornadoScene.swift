@@ -18,6 +18,7 @@ final class TornadoScene: SKScene {
     private var snapshotter: MKMapSnapshotter?
     private var built = false
     private var lastEF = -1
+    private var liftingIDs: Set<Int> = []
     private let core = SKShapeNode(circleOfRadius: 10)
     private let halo = SKShapeNode(circleOfRadius: 26)
 
@@ -57,6 +58,7 @@ final class TornadoScene: SKScene {
         guard !isPaused else { return }
         let result = simulation.step(delta: delta, direction: direction)
         for id in result.destroyed { destroy(id) }
+        updateLiftingObjects()
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
         // A thin rope at EF0 broadens into a wider, rounder circulation at EF5.
         let baseScale = simulation.radius / 26
@@ -116,6 +118,7 @@ final class TornadoScene: SKScene {
     private func makeObjects() {
         for object in simulation.objects {
             let node = SKNode()
+            node.name = "object-\(object.id)"
             node.position = CGPoint(x: object.position.x, y: object.position.y)
             switch object.kind {
             case .tree:
@@ -190,6 +193,32 @@ final class TornadoScene: SKScene {
         eye.strokeColor = .clear
         tornado.addChild(eye)
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
+    }
+    private func updateLiftingObjects() {
+        var active: Set<Int> = []
+        for object in simulation.objects where simulation.canLift(object) && object.damage > 0 {
+            guard let node = objectNodes[object.id] else { continue }
+            active.insert(object.id)
+            let amount = min(1, object.damage)
+            let light = object.kind == .tree || object.kind == .car
+            let pull = amount * (light ? 0.3 : 0.08)
+            node.position = CGPoint(
+                x: object.position.x + (simulation.position.x - object.position.x) * pull,
+                y: object.position.y + (simulation.position.y - object.position.y) * pull + amount * (light ? 14 : 3))
+            node.zRotation = CGFloat(object.id % 3) * 0.16
+                + CGFloat(sin(simulation.elapsed * 35 + Double(object.id)) * amount * (light ? 0.4 : 0.08))
+            node.setScale(1 + amount * (light ? 0.15 : 0.04))
+            node.zPosition = light ? 2 : 1
+        }
+        for id in liftingIDs.subtracting(active) {
+            guard let node = objectNodes[id] else { continue }
+            let object = simulation.objects[id]
+            node.position = CGPoint(x: object.position.x, y: object.position.y)
+            node.zRotation = CGFloat(id % 3) * 0.16
+            node.setScale(1)
+            node.zPosition = 0
+        }
+        liftingIDs = active
     }
     private func destroy(_ id: Int) {
         guard let node = objectNodes.removeValue(forKey: id) else { return }
@@ -287,3 +316,4 @@ final class TornadoScene: SKScene {
         direction = Point(0, 0)
     }
 }
+

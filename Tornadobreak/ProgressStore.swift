@@ -24,6 +24,7 @@ final class ProgressStore: ObservableObject {
     }
     /// All rewards from a frame are saved together, before any result screen appears.
     func record(_ result: StepResult, simulation: Simulation) -> (coins: Int, completion: Int) {
+        guard !result.destroyed.isEmpty || !result.newQuests.isEmpty || result.finished else { return (0, 0) }
         var next = progress
         let before = next.coins
         for id in result.destroyed {
@@ -44,3 +45,4 @@ final class ProgressStore: ObservableObject {
         progress = value
     }
 }
+

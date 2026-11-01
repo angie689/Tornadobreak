@@ -10,7 +10,8 @@ Drag the thumbstick to steer. Warm, moist **green** zones build energy; cool, dr
 **blue** zones drain it. The overview map shows your position and weather zones.
 Grow from EF0 to EF5: the funnel widens, wind increases, and more objects become
 liftable. Pass close to trees, cars, homes, and larger buildings to break them
-apart. Heavier objects take more strength and a little more time.
+apart. Trees and cars rise and pull toward the funnel before breaking; heavier
+buildings shake as they take damage. Heavier objects take more strength and time.
 
 Finish all three objectives in one run to complete a level:
 
@@ -25,7 +26,8 @@ Destruction pays 1/3/7/12 TC for trees/cars/houses/buildings. Each objective giv
 pay 25%. Coins, quest claims, completed levels, and upgrades save automatically
 in device-local storage when earned. Leaving a run resets its objectives, not
 its earned coins. At zero energy, reaching better air within 8 seconds can save
-you. Backgrounding pauses automatically; resume explicitly when you return.
+you; the low-energy banner counts down those last seconds. Backgrounding pauses
+automatically; resume explicitly when you return.
 
 Only three upgrades: Suction (+10% lift/rank), Stability (14% less loss/rank),
 Speed (+12% movement/rank). Each has three ranks costing 60, 130, and 200 TC.
@@ -38,7 +40,9 @@ permission. Destructible clusters use explicit latitude/longitude reference poin
 inside each region; individual offsets and building/tree/car types are **game
 placements**, not actual parcel inventories. Weather is fictional gameplay data,
 not live weather. EF and wind are simplified game estimates, not safety guidance.
-Apple attribution remains visible. When a snapshot cannot load, the app clearly
+The wind display stays within the corresponding [NWS EF wind band](https://www.weather.gov/grb/efscale)
+(EF5 is capped at 220 mph for gameplay). Apple attribution remains visible.
+When a snapshot cannot load, the app clearly
 labels its reference grid; it never substitutes a fictional street map. Maps
 require connectivity; the rest of gameplay and saving work offline.
 
@@ -90,7 +94,8 @@ Use an installed simulator name. The CI workflow chooses one automatically.
 Core tests run with Swift 5.9+ on Linux or macOS. The app and UI tests require
 Apple's SDKs. Tests cover growth, weather loss, dissipation, controls/bounds,
 upgrades, completion of all three levels, one-time rewards, replay payout,
-serialization, local save/reload, scene construction, and menu/pause navigation.
+serialization, local save/reload, scene construction, visible lifting, EF/wind
+consistency, and menu/pause navigation.
 
 ## Small by design
 
@@ -99,3 +104,4 @@ There is no real-time fluid simulation: the tornado uses six animated arcs and a
 small capped debris burst, with no fragment physics. There are 120 destructibles
 per level and the HUD refreshes at 10 Hz. Sound, haptics, run resumption after
 termination, and additional maps are outside version 1.0.
+

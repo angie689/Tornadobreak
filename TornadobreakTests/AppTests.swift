@@ -5,6 +5,34 @@ import XCTest
 @testable import Tornadobreak
 
 final class AppTests: XCTestCase {
+    func testObjectsVisiblyLiftBeforeDestruction() async throws {
+        try await MainActor.run {
+            let scene = TornadoScene(level: Level.all[0], progress: Progress())
+            let view = SKView(frame: CGRect(x: 0, y: 0, width: 414, height: 896))
+            view.presentScene(scene)
+            defer { scene.stop() }
+            let target = try XCTUnwrap(scene.simulation.objects.first { $0.kind == .tree })
+            scene.update(0)
+            var lifted = false
+            for frame in 1...240 {
+                let position = scene.simulation.position
+                let distance = position.distance(to: target.position)
+                scene.setDirection(distance > 4
+                    ? Point((target.position.x - position.x) / distance, (target.position.y - position.y) / distance)
+                    : Point(0, 0))
+                scene.update(Double(frame) / 60)
+                let object = scene.simulation.objects[target.id]
+                if object.damage > 0 && !object.destroyed {
+                    let node = try XCTUnwrap(scene.childNode(withName: "//object-\(target.id)"))
+                    XCTAssertGreaterThan(node.xScale, 1)
+                    XCTAssertNotEqual(node.position, CGPoint(x: target.position.x, y: target.position.y))
+                    lifted = true
+                    break
+                }
+            }
+            XCTAssertTrue(lifted)
+        }
+    }
     func testSceneBuildsAndUpdatesActualTornado() async {
         await MainActor.run {
             let scene = TornadoScene(level: Level.all[0], progress: Progress())
@@ -61,3 +89,4 @@ final class AppTests: XCTestCase {
         }
     }
 }
+

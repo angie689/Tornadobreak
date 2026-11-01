@@ -37,7 +37,16 @@ public struct Simulation {
     public static let thresholds: [Double] = [0, 18, 36, 55, 76, 93]
     public var ef: Int { Self.thresholds.lastIndex(where: { energy >= $0 }) ?? 0 }
     /// Gameplay estimate, not a measurement or real-time weather report.
-    public var wind: Int { Int(65 + energy * 1.55) }
+    public var wind: Int {
+        // NWS EF wind bands. Energy drives the game, not a real storm measurement.
+        let lower = [65, 86, 111, 136, 166, 201]
+        let upper = [85, 110, 135, 165, 200, 220]
+        let category = ef
+        let ceiling = category == 5 ? 100 : Self.thresholds[category + 1]
+        let fraction = (energy - Self.thresholds[category]) / (ceiling - Self.thresholds[category])
+        return min(upper[category], lower[category] + Int(fraction * Double(upper[category] - lower[category] + 1)))
+    }
+    public var dissipationRemaining: Int { max(0, Int(ceil(8 - emptyTime))) }
     public var radius: Double { 20 + energy * 0.53 }
     public var liftingPower: Double { energy * (1 + Double(ranks[.suction, default: 0]) * 0.10) }
     public var speed: Double { 135 * (1 + Double(ranks[.speed, default: 0]) * 0.12) }
@@ -59,6 +68,10 @@ public struct Simulation {
         case .destruction: return destroyedCount
         case .survival: return Int(elapsed)
         }
+    }
+    public func canLift(_ object: WorldObject) -> Bool {
+        !object.destroyed && position.distance(to: object.position) <= radius + 9
+            && liftingPower >= object.kind.resistance
     }
     /// Direction is a normalized virtual joystick vector. Simulation time freezes while paused.
     public mutating func step(delta: Double, direction: Point) -> StepResult {
@@ -89,9 +102,7 @@ public struct Simulation {
         }
         for index in objects.indices where !objects[index].destroyed {
             let object = objects[index]
-            guard position.distance(to: object.position) <= radius + 9,
-                liftingPower >= object.kind.resistance
-            else { continue }
+            guard canLift(object) else { continue }
             // Buildings take a little longer to break apart than trees and cars.
             let duration: Double = object.kind == .house || object.kind == .block ? 0.85 : 0.3
             objects[index].damage += dt / duration
@@ -138,3 +149,4 @@ public struct Simulation {
         return objects
     }
 }
+

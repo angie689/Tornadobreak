@@ -107,7 +107,9 @@ private struct GameRunView: View {
     private var controls: some View {
         VStack(spacing: 8) {
             if session.simulation.energy < 10 && session.simulation.weather == .dry {
-                Text("LOW ENERGY · Move to green air!").font(.caption.bold()).foregroundStyle(.orange)
+                Text(session.simulation.energy <= 0
+                    ? "\(session.simulation.dissipationRemaining)s left · Move to green air!"
+                    : "LOW ENERGY · Move to green air!").font(.caption.bold()).foregroundStyle(.orange)
                     .padding(10).background(Theme.background.opacity(0.9), in: Capsule())
             }
             HStack(alignment: .bottom) {
@@ -247,3 +249,4 @@ private struct Joystick: View {
             .accessibilityIdentifier("joystick")
     }
 }
+

@@ -3,6 +3,39 @@ import XCTest
 @testable import TornadoCore
 
 final class SimulationTests: XCTestCase {
+    func testDisplayedWindMatchesEveryEFCategory() {
+        let bands = [65...85, 86...110, 111...135, 136...165, 166...200, 201...220]
+        for level in Level.all {
+            var sim = Simulation(level: level)
+            var categories: Set<Int> = []
+            var previousWind = sim.wind
+            for _ in 0..<1100 {
+                _ = sim.step(delta: 0.1, direction: Point(0, 0))
+                categories.insert(sim.ef)
+                XCTAssertTrue(bands[sim.ef].contains(sim.wind), "EF\(sim.ef) with \(sim.wind) mph")
+                XCTAssertGreaterThanOrEqual(sim.wind, previousWind)
+                previousWind = sim.wind
+            }
+            XCTAssertEqual(categories, Set(0...5))
+        }
+    }
+    func testLiftFeedbackOnlyAppliesToReachableObjects() {
+        var sim = Simulation(level: Level.all[0])
+        let target = sim.objects.first { $0.kind == .tree }!
+        XCTAssertFalse(sim.canLift(target))
+        var sawLifting = false
+        for _ in 0..<150 {
+            _ = sim.step(delta: 0.05, direction: vector(from: sim.position, to: target.position))
+            let current = sim.objects[target.id]
+            if current.damage > 0 && !current.destroyed {
+                XCTAssertTrue(sim.canLift(current))
+                sawLifting = true
+            }
+        }
+        XCTAssertTrue(sawLifting)
+        XCTAssertTrue(sim.objects[target.id].destroyed)
+        XCTAssertFalse(sim.canLift(sim.objects[target.id]))
+    }
     func testWarmAirGrowsFromEF0ToEF5AndWidens() {
         var sim = Simulation(level: Level.all[0])
         XCTAssertEqual(sim.ef, 0)
@@ -135,3 +168,4 @@ final class SimulationTests: XCTestCase {
         for _ in 0..<steps { _ = sim.step(delta: 0.1, direction: vector(from: sim.position, to: target)) }
     }
 }
+
