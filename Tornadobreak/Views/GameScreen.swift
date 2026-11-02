@@ -40,62 +40,77 @@ private struct GameRunView: View {
         .onDisappear { session.scene.stop() }
         .persistentSystemOverlays(.hidden)
     }
-    // Landscape HUD: a single compact strip keeps the middle of the map visible.
+    // Compact landscape strip: quests and controls remain visible on short iPhone screens.
     private var hud: some View {
-        HStack(alignment: .center, spacing: 13) {
+        HStack(alignment: .center, spacing: 9) {
             Button {
                 session.setPaused(true)
             } label: {
                 Image(systemName: "pause.fill")
-                    .font(.headline).frame(width: 44, height: 44)
+                    .font(.subheadline)
+                    .frame(width: 42, height: 42)
                     .background(.white.opacity(0.08), in: Circle())
             }
-            .accessibilityLabel("Pause").accessibilityIdentifier("pauseButton")
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.level.name).font(.subheadline.bold()).lineLimit(1)
-                Text(session.level.difficulty.uppercased())
-                    .font(.system(size: 9, weight: .bold)).tracking(1).foregroundStyle(Theme.muted)
+            .accessibilityLabel("Pause")
+            .accessibilityIdentifier("pauseButton")
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text("EF\(session.simulation.ef)")
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.mint)
+                    .accessibilityIdentifier("strengthLabel")
+                Text(session.level.name)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .frame(maxWidth: 140, alignment: .leading)
-            Text("EF\(session.simulation.ef)")
-                .font(.system(size: 30, weight: .heavy, design: .rounded))
-                .foregroundStyle(Theme.mint)
-                .accessibilityIdentifier("strengthLabel")
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 10) {
-                    Text("\(session.simulation.wind) mph").font(.subheadline.bold()).monospacedDigit()
+            .frame(width: 94, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text("\(session.simulation.wind) mph")
+                        .font(.caption.bold())
+                        .monospacedDigit()
                     Text("\(Int(session.simulation.elapsed))s")
-                        .font(.caption).monospacedDigit().foregroundStyle(Theme.muted)
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.muted)
                 }
-                ProgressView(value: session.simulation.energy, total: 100).tint(Theme.mint)
-                HStack(spacing: 4) {
-                    Circle().fill(weatherColor).frame(width: 6, height: 6)
-                    Text(session.simulation.weather.rawValue)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(weatherColor)
-                }
+                ProgressView(value: session.simulation.energy, total: 100)
+                    .tint(Theme.mint)
+                Text(session.simulation.weather.rawValue)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(weatherColor)
             }
-            .frame(maxWidth: 145)
+            .frame(width: 130, alignment: .leading)
+
             VStack(alignment: .leading, spacing: 3) {
                 ForEach(session.level.quests) { quest in
                     let done = session.simulation.achieved.contains(quest.kind)
                     HStack(spacing: 5) {
                         Image(systemName: done ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(done ? Theme.mint : Theme.muted)
-                        Text(quest.title).lineLimit(1).minimumScaleFactor(0.7)
+                        Text(quest.title)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                         Spacer(minLength: 2)
                         Text("\(min(quest.target, session.simulation.value(for: quest)))/\(quest.target)")
-                            .foregroundStyle(Theme.muted).monospacedDigit()
+                            .foregroundStyle(Theme.muted)
+                            .monospacedDigit()
                     }
                     .font(.system(size: 10, weight: .medium))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
             CoinPill(amount: session.coins)
         }
-        .padding(10)
-        .background(Theme.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 18))
-        .padding(.horizontal, 12).padding(.top, 3)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(Theme.background.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 8)
+        .padding(.top, 2)
     }
     private var weatherColor: Color {
         switch session.simulation.weather {
@@ -105,35 +120,39 @@ private struct GameRunView: View {
         }
     }
     private var controls: some View {
-        VStack(spacing: 8) {
-            if session.simulation.energy < 10 && session.simulation.weather == .dry {
-                Text(session.simulation.energy <= 0
-                    ? "\(session.simulation.dissipationRemaining)s left · Move to green air!"
-                    : "LOW ENERGY · Move to green air!").font(.caption.bold()).foregroundStyle(.orange)
-                    .padding(10).background(Theme.background.opacity(0.9), in: Capsule())
-            }
-            HStack(alignment: .bottom) {
-                Joystick { session.scene.setDirection($0) }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 6) {
-                    miniMap
-                    Text("N ↑").font(.system(size: 9, weight: .bold)).foregroundStyle(Theme.muted)
-                }.padding(.bottom, 12)
-            }.padding(.horizontal, 22)
-            Text(session.toast).font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.mint)
-                .padding(.horizontal, 12).padding(.vertical, 5)
-                .background(Theme.background.opacity(0.8), in: Capsule())
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(session.level.name), \(session.level.state)")
-                    Text(session.mapStatus)
+        HStack(alignment: .bottom, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                if session.simulation.energy < 10 && session.simulation.weather == .dry {
+                    Text(session.simulation.energy <= 0
+                        ? "\(session.simulation.dissipationRemaining)s left · Get to green air!"
+                        : "LOW ENERGY · Find green air!")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.orange)
+                        .lineLimit(1)
+                        .padding(6)
+                        .background(Theme.background.opacity(0.9), in: Capsule())
                 }
-                Spacer(minLength: 4)
-                Text("Maps © Apple\nGame objects are illustrative")
-                    .multilineTextAlignment(.trailing)
-            }.font(.system(size: 8)).foregroundStyle(.white.opacity(0.8))
-                .padding(.horizontal, 14).padding(.vertical, 5).background(Theme.background.opacity(0.8))
+                Joystick { session.scene.setDirection($0) }
+            }
+
+            Spacer(minLength: 4)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                miniMap
+                Text("N ↑  ·  \(session.mapStatus)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Text("Maps © Apple · Game objects illustrative")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
+            }
+            .padding(6)
+            .background(Theme.background.opacity(0.76), in: RoundedRectangle(cornerRadius: 10))
         }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 5)
     }
     private var miniMap: some View {
         Canvas { context, size in
@@ -150,68 +169,121 @@ private struct GameRunView: View {
             let dot = CGRect(
                 x: position.x * scaleX - 3, y: (Level.worldSize.y - position.y) * scaleY - 3, width: 6, height: 6)
             context.fill(Path(ellipseIn: dot), with: .color(.white))
-        }.frame(width: 94, height: 86).background(Theme.background.opacity(0.9))
+        }.frame(width: 85, height: 70).background(Theme.background.opacity(0.9))
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.22)))
             .accessibilityLabel("Weather overview. Green zones strengthen the tornado.")
     }
     private var pauseOverlay: some View {
-        overlayContainer {
-            Image(systemName: "pause.circle").font(.system(size: 48)).foregroundStyle(Theme.mint)
-            Text("Take a breather.").font(.title.bold())
-            Text("Your coins are saved. Your run will resume right here.")
-                .font(.subheadline).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
-            Button("Resume") { session.setPaused(false) }.buttonStyle(PrimaryButtonStyle())
-                .accessibilityIdentifier("resumeButton")
-            Button("Leave run") { dismiss() }.buttonStyle(SecondaryButtonStyle())
-            Text("Leaving resets these objectives, but keeps earned coins and bonuses.")
-                .font(.caption).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
-        }
-    }
-    private func resultOverlay(_ summary: RunSummary) -> some View {
-        overlayContainer {
-            Image(systemName: summary.won ? "checkmark.seal.fill" : "cloud.fog.fill")
-                .font(.system(size: 50)).foregroundStyle(summary.won ? Theme.mint : Theme.muted)
-            Text(summary.won ? "Outbreak complete" : "Tornado dissipated")
-                .font(.title2.bold()).accessibilityIdentifier("resultTitle")
-            Text(
-                summary.won
-                    ? "\(session.level.name) · all objectives complete" : "Find warm, moist air to keep your energy up."
-            )
-            .font(.subheadline).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
-            HStack(spacing: 20) {
-                stat("EF\(summary.peakEF)", "PEAK")
-                stat("\(summary.destroyed)", "DESTROYED")
-                stat("\(summary.seconds)s", "SURVIVED")
-            }.padding(.vertical, 10)
-            Text("+\(summary.coins) TC earned").font(.title2.bold()).foregroundStyle(.yellow)
-            if summary.won {
-                Text(
-                    "Includes \(summary.completion) TC completion reward\n\(summary.firstCompletion ? "First completion · 100%" : "Replay · 25%")"
-                )
-                .font(.caption).foregroundStyle(Theme.muted).multilineTextAlignment(.center)
+        landscapeOverlay {
+            HStack(alignment: .center, spacing: 22) {
+                VStack(spacing: 9) {
+                    Image(systemName: "pause.circle")
+                        .font(.system(size: 36))
+                        .foregroundStyle(Theme.mint)
+                    Text("Paused")
+                        .font(.title2.bold())
+                    Text("Your coins are saved. Your run resumes right here.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.muted)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 10) {
+                    Button("Resume") {
+                        session.setPaused(false)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .accessibilityIdentifier("resumeButton")
+                    Button("Leave run") {
+                        dismiss()
+                    }
+                    .buttonStyle(SecondaryButtonStyle())
+                    Text("Leaving resets this run's objectives, but keeps earned coins.")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.muted)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
             }
-            Button("Choose level") { dismiss() }.buttonStyle(PrimaryButtonStyle())
-            Button("Play again") { replay() }.buttonStyle(SecondaryButtonStyle())
-            Text("Progress saved automatically").font(.caption).foregroundStyle(Theme.muted)
         }
     }
+
+    private func resultOverlay(_ summary: RunSummary) -> some View {
+        landscapeOverlay {
+            HStack(alignment: .center, spacing: 22) {
+                VStack(spacing: 9) {
+                    Image(systemName: summary.won ? "checkmark.seal.fill" : "cloud.fog.fill")
+                        .font(.system(size: 35))
+                        .foregroundStyle(summary.won ? Theme.mint : Theme.muted)
+                    Text(summary.won ? "Outbreak complete" : "Tornado dissipated")
+                        .font(.title3.bold())
+                        .accessibilityIdentifier("resultTitle")
+                        .multilineTextAlignment(.center)
+                    Text(summary.won
+                        ? "\(session.level.name) · all objectives complete"
+                        : "Find warm, moist air to keep your energy up.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.muted)
+                        .multilineTextAlignment(.center)
+                    HStack(spacing: 16) {
+                        stat("EF\(summary.peakEF)", "PEAK")
+                        stat("\(summary.destroyed)", "DESTROYED")
+                        stat("\(summary.seconds)s", "SURVIVED")
+                    }
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(spacing: 9) {
+                    Text("+\(summary.coins) TC earned")
+                        .font(.title3.bold())
+                        .foregroundStyle(.yellow)
+                    if summary.won {
+                        Text("Includes \(summary.completion) TC completion reward · \(summary.firstCompletion ? "First clear 100%" : "Replay 25%")")
+                            .font(.caption2)
+                            .foregroundStyle(Theme.muted)
+                            .multilineTextAlignment(.center)
+                    }
+                    Button("Choose level") { dismiss() }
+                        .buttonStyle(PrimaryButtonStyle())
+                    Button("Play again") { replay() }
+                        .buttonStyle(SecondaryButtonStyle())
+                    Text("Progress saved automatically")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.muted)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
     private func stat(_ value: String, _ caption: String) -> some View {
-        VStack(spacing: 5) {
-            Text(value).font(.system(.title3, design: .rounded).bold())
-            Text(caption).font(.system(size: 8, weight: .bold)).foregroundStyle(Theme.muted)
+        VStack(spacing: 4) {
+            Text(value).font(.system(.headline, design: .rounded).bold())
+            Text(caption)
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(Theme.muted)
         }
     }
-    private func overlayContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        ZStack {
-            Color.black.opacity(0.75).ignoresSafeArea()
-            ScrollView {
-                VStack(spacing: 17, content: content).padding(26)
-                    .frame(maxWidth: 400).background(Theme.panel, in: RoundedRectangle(cornerRadius: 28))
-                    .padding(20).frame(maxWidth: .infinity)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+
+    private func landscapeOverlay<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        GeometryReader { geometry in
+            ZStack {
+                Color.black.opacity(0.75).ignoresSafeArea()
+                ScrollView {
+                    content()
+                        .padding(18)
+                        .frame(maxWidth: 700)
+                        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 22))
+                        .padding(10)
+                        .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+                }
+                .scrollIndicators(.hidden)
+            }
         }
     }
+
 }
 
 private struct Joystick: View {
@@ -222,18 +294,18 @@ private struct Joystick: View {
             Circle().fill(Theme.background.opacity(0.8))
             Circle().stroke(.white.opacity(0.16), lineWidth: 1)
             Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
-                .font(.system(size: 48, weight: .ultraLight)).foregroundStyle(.white.opacity(0.1))
-            Circle().fill(Theme.mint.opacity(0.22)).frame(width: 54, height: 54)
+                .font(.system(size: 36, weight: .ultraLight)).foregroundStyle(.white.opacity(0.1))
+            Circle().fill(Theme.mint.opacity(0.22)).frame(width: 44, height: 44)
                 .overlay(Circle().stroke(Theme.mint.opacity(0.6), lineWidth: 1.5))
                 .offset(offset)
-        }.frame(width: 132, height: 132).contentShape(Circle())
+        }.frame(width: 108, height: 108).contentShape(Circle())
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
-                        let dx = value.location.x - 66
-                        let dy = value.location.y - 66
+                        let dx = value.location.x - 54
+                        let dy = value.location.y - 54
                         let distance = hypot(dx, dy)
-                        let maximum: CGFloat = 45
+                        let maximum: CGFloat = 35
                         let scale = distance > maximum ? maximum / distance : 1
                         offset = CGSize(width: dx * scale, height: dy * scale)
                         move(Point(Double(offset.width / maximum), -Double(offset.height / maximum)))

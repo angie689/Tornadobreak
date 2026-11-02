@@ -2,9 +2,28 @@ import XCTest
 
 final class GameplayUITests: XCTestCase {
     @MainActor
-    func testMenuPlaySteerPauseAndReturn() async throws {
+    func testLandscapeUpgradesAreAccessible() async throws {
+        XCUIDevice.shared.orientation = .landscapeRight
         let app = XCUIApplication()
         app.launch()
+        let upgrades = app.buttons["Upgrades"]
+        XCTAssertTrue(upgrades.waitForExistence(timeout: 10))
+        XCTAssertTrue(upgrades.isHittable)
+        upgrades.tap()
+        let suction = app.buttons["upgrade-suction"]
+        XCTAssertTrue(suction.waitForExistence(timeout: 5))
+        XCTAssertTrue(suction.isHittable)
+        XCTAssertTrue(app.buttons["upgrade-stability"].exists)
+        XCTAssertTrue(app.buttons["upgrade-speed"].exists)
+    }
+
+    @MainActor
+    func testMenuPlaySteerPauseAndReturn() async throws {
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.buttons["playButton"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["playButton"].isHittable)
         app.buttons["playButton"].tap()
         let level = app.buttons["level-moore"]
         XCTAssertTrue(level.waitForExistence(timeout: 5))
