@@ -61,7 +61,7 @@ jobs:
   simulator:
     name: Native app and UI checks
     runs-on: macos-15-intel
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Prepare project
@@ -73,8 +73,8 @@ jobs:
         id: simulator
         timeout-minutes: 3
         run: python3 scripts/select_simulator.py
-      - name: Build native app and tests while simulator boots
-        timeout-minutes: 5
+      - name: Build native app and tests
+        timeout-minutes: 12
         run: |
           set -o pipefail
           mkdir -p build
@@ -82,11 +82,13 @@ jobs:
             -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}' \
             -destination-timeout 30 -derivedDataPath build/simulator \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee build/simulator-build.log
-      - name: Wait for simulator boot
-        timeout-minutes: 3
-        run: xcrun simctl bootstatus '${{ steps.simulator.outputs.id }}' -b
+      - name: Boot simulator after compilation
+        timeout-minutes: 4
+        run: |
+          xcrun simctl boot '${{ steps.simulator.outputs.id }}' || true
+          xcrun simctl bootstatus '${{ steps.simulator.outputs.id }}' -b
       - name: Run native app and UI tests
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
           set -o pipefail
           xcodebuild test-without-building -project Tornadobreak.xcodeproj -scheme Tornadobreak \

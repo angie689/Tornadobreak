@@ -28,8 +28,8 @@ def main():
     print(f"Testing on {device['name']} with iOS {sdk}: {device['udid']}", flush=True)
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         output.write('id=' + device['udid'] + '\n')
-    if device.get('state') != 'Booted':
-        subprocess.run(['xcrun', 'simctl', 'boot', device['udid']], check=True, timeout=60)
+    # Do not boot before compilation; booting CoreSimulator alongside Xcode
+    # consumes enough resources to starve the simulator build on CI.
 
 
 if __name__ == '__main__':
