@@ -116,8 +116,8 @@ consistency, and menu/pause navigation.
 
 No accounts, ads, shops, multiplayer, analytics, paid maps, or additional currencies.
 Cars and trees use custom, transparent player-designed sprite art. Houses and the tornado
-keep their original visuals. There is no real-time fluid simulation: the tornado uses six
-animated arcs and a small capped debris burst, with no fragment physics. There are 120 destructibles
+keep their original visuals. The tornado uses an eight-frame transparent animated vortex atlas, retaining
+natural EF0–EF5 growth and a small capped debris burst. No fluid simulation or fragment physics. There are 120 destructibles
 per level and the HUD refreshes at 10 Hz. Sound, haptics, run resumption after
 termination, and additional maps are outside version 1.0.
 

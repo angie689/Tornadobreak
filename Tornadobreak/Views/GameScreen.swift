@@ -267,7 +267,7 @@ private struct GameRunView: View {
         }
     }
 
-    private func landscapeOverlay<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    private func landscapeOverlay<Content: View>(@ViewBuilder content: @escaping () -> Content) -> some View {
         GeometryReader { geometry in
             ZStack {
                 Color.black.opacity(0.75).ignoresSafeArea()

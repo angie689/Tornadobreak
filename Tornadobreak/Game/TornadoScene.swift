@@ -17,10 +17,7 @@ final class TornadoScene: SKScene {
     private var hudTime: Double = 0
     private var snapshotter: MKMapSnapshotter?
     private var built = false
-    private var lastEF = -1
     private var liftingIDs: Set<Int> = []
-    private let core = SKShapeNode(circleOfRadius: 10)
-    private let halo = SKShapeNode(circleOfRadius: 26)
 
     init(level: Level, progress: TornadoCore.Progress) {
         simulation = Simulation(level: level, progress: progress)
@@ -60,16 +57,9 @@ final class TornadoScene: SKScene {
         for id in result.destroyed { destroy(id) }
         updateLiftingObjects()
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
-        // A thin rope at EF0 broadens into a wider, rounder circulation at EF5.
+        // The animated spiral widens naturally as the tornado strengthens.
         let baseScale = simulation.radius / 26
-        tornado.xScale = baseScale * (0.72 + Double(simulation.ef) * 0.056)
-        tornado.yScale = baseScale * (1.08 - Double(simulation.ef) * 0.016)
-        if lastEF != simulation.ef {
-            lastEF = simulation.ef
-            let colors: [UIColor] = [.systemMint, .systemTeal, .systemCyan, .systemYellow, .systemOrange, .systemRed]
-            core.fillColor = colors[lastEF].withAlphaComponent(0.9)
-            halo.strokeColor = colors[lastEF].withAlphaComponent(0.55)
-        }
+        tornado.setScale(baseScale)
         updateCamera()
         hudTime += delta
         let publish = hudTime >= 0.1
@@ -163,30 +153,25 @@ final class TornadoScene: SKScene {
         }
     }
     private func makeTornado() {
+        tornado.name = "tornado"
         tornado.zPosition = 8
         addChild(tornado)
-        halo.fillColor = .black.withAlphaComponent(0.22)
-        halo.lineWidth = 1
-        tornado.addChild(halo)
-        for index in 0..<6 {
-            let radius = CGFloat(9 + index * 3)
-            let path = UIBezierPath(
-                arcCenter: .zero, radius: radius, startAngle: 0,
-                endAngle: .pi * 1.55, clockwise: true)
-            let ring = SKShapeNode(path: path.cgPath)
-            ring.strokeColor = UIColor(white: 0.92, alpha: 0.32 + Double(index) * 0.07)
-            ring.lineWidth = CGFloat(2 + index / 2)
-            ring.zRotation = CGFloat(index) * 1.4
-            ring.run(.repeatForever(.rotate(byAngle: .pi * 2, duration: 0.65 + Double(index) * 0.16)))
-            tornado.addChild(ring)
+        // All eight 40x40 transparent frames live in a single 8:1 atlas texture.
+        // This avoids loading eight separate PNGs and minimizes GPU texture switches.
+        let atlas = SKTexture(imageNamed: "TornadoVortexAtlas")
+        atlas.filteringMode = .linear
+        let frames: [SKTexture] = (0..<8).map { index in
+            let region = CGRect(x: CGFloat(index) / 8, y: 0, width: 1.0 / 8, height: 1)
+            let texture = SKTexture(rect: region, in: atlas)
+            texture.filteringMode = .linear
+            return texture
         }
-        core.strokeColor = .white.withAlphaComponent(0.55)
-        core.lineWidth = 1
-        tornado.addChild(core)
-        let eye = SKShapeNode(circleOfRadius: 4)
-        eye.fillColor = .black.withAlphaComponent(0.65)
-        eye.strokeColor = .clear
-        tornado.addChild(eye)
+        let vortex = SKSpriteNode(texture: frames[0], size: CGSize(width: 58, height: 58))
+        vortex.name = "vortexSprite"
+        tornado.addChild(vortex)
+        // Generated frames cycle smoothly; rotation gives the vortex continuous motion.
+        vortex.run(.repeatForever(.animate(with: frames, timePerFrame: 0.105)))
+        vortex.run(.repeatForever(.rotate(byAngle: .pi * 2, duration: 1.7)))
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
     }
     private func updateLiftingObjects() {

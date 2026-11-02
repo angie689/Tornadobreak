@@ -40,6 +40,20 @@ final class AppTests: XCTestCase {
             }
         }
     }
+    func testAnimatedTornadoVortexAtlasIsBundled() async {
+        await MainActor.run {
+            let atlas = UIImage(named: "TornadoVortexAtlas")
+            XCTAssertNotNil(atlas)
+            if let atlas {
+                XCTAssertEqual(atlas.size.width / atlas.size.height, 8, accuracy: 0.05)
+            }
+            let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
+            let view = SKView(frame: CGRect(x: 0, y: 0, width: 896, height: 414))
+            view.presentScene(scene)
+            XCTAssertNotNil(scene.childNode(withName: "//vortexSprite"))
+            scene.stop()
+        }
+    }
     func testOnlyLandscapeOrientationsAreSupported() {
         let orientations = Bundle(for: TornadoScene.self)
             .object(forInfoDictionaryKey: "UISupportedInterfaceOrientations") as? [String]
