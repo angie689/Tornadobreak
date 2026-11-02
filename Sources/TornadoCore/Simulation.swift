@@ -34,6 +34,7 @@ public struct Simulation {
     public private(set) var finished = false
     public private(set) var dissipated = false
     private var emptyTime: Double = 0
+    private var stationaryTime: Double = 0
     public static let thresholds: [Double] = [0, 18, 36, 55, 76, 93]
     public var ef: Int { Self.thresholds.lastIndex(where: { energy >= $0 }) ?? 0 }
     /// Gameplay estimate, not a measurement or real-time weather report.
@@ -50,8 +51,31 @@ public struct Simulation {
     public var radius: Double { 20 + energy * 0.53 }
     public var liftingPower: Double { energy * (1 + Double(ranks[.suction, default: 0]) * 0.10) }
     public var speed: Double { 135 * (1 + Double(ranks[.speed, default: 0]) * 0.12) }
+    /// Weather drifts during the run; Moore remains static as the introductory level.
+    /// All offsets start at zero, so a fresh run always begins in favorable air.
+    public var weatherZones: [WeatherZone] {
+        let drift: Double
+        let period: Double
+        switch level.id {
+        case "chicago": drift = 300; period = 70
+        case "dallas": drift = 215; period = 95
+        default: return level.zones
+        }
+        let phase = elapsed * 2 * Double.pi / period
+        return level.zones.enumerated().map { index, zone in
+            let offset = Double(index)
+            let strength = index < 2 ? drift : drift * 0.48
+            let x = zone.center.x + (sin(phase + offset * 0.7) - sin(offset * 0.7)) * strength
+            let y = zone.center.y + (cos(phase + offset * 0.8) - cos(offset * 0.8)) * strength * 0.75
+            return WeatherZone(
+                center: Point(
+                    min(max(40, x), Level.worldSize.x - 40),
+                    min(max(40, y), Level.worldSize.y - 40)),
+                radius: zone.radius, favorable: zone.favorable)
+        }
+    }
     public var weather: Weather {
-        for zone in level.zones where position.distance(to: zone.center) < zone.radius {
+        for zone in weatherZones where position.distance(to: zone.center) < zone.radius {
             return zone.favorable ? .warm : .dry
         }
         return .mixed
@@ -80,17 +104,23 @@ public struct Simulation {
         let dt = min(delta, 0.1)
         elapsed += dt
         let magnitude = hypot(direction.x, direction.y)
-        if magnitude.isFinite, magnitude > 0 {
+        if magnitude.isFinite, magnitude > 0.08 {
+            stationaryTime = 0
             let divisor = max(1, magnitude)
             position.x += direction.x / divisor * speed * dt
             position.y += direction.y / divisor * speed * dt
+        } else {
+            stationaryTime += dt
         }
         position.x = min(max(24, position.x), Level.worldSize.x - 24)
         position.y = min(max(24, position.y), Level.worldSize.y - 24)
         let rate: Double
         switch weather {
-        case .warm: rate = level.growth
-        case .mixed: rate = level.growth * 0.22
+        case .warm:
+            // In Dallas and Chicago, camping in one spot stops being an easy EF5 strategy.
+            rate = level.growth * (level.id != "moore" && stationaryTime > 14 ? 0.12 : 1)
+        case .mixed:
+            rate = level.growth * (level.id == "chicago" ? 0.08 : 0.22)
         case .dry: rate = -level.loss * (1 - 0.14 * Double(ranks[.stability, default: 0]))
         }
         energy = min(100, max(0, energy + rate * dt))
@@ -110,6 +140,12 @@ public struct Simulation {
                 objects[index].destroyed = true
                 destroyedCount += 1
                 result.destroyed.append(object.id)
+                // Large debris loads disrupt the circulation; trees and cars stay cheap.
+                if object.kind == .house || object.kind == .block {
+                    let load = object.kind == .block ? 1.2 : 0.45
+                    let difficulty = level.id == "chicago" ? 1.5 : (level.id == "dallas" ? 1 : 0.5)
+                    energy = max(0, energy - load * difficulty)
+                }
             }
         }
         for quest in level.quests where !achieved.contains(quest.kind) && value(for: quest) >= quest.target {

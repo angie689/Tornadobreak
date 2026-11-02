@@ -66,8 +66,10 @@ public enum Upgrade: String, CaseIterable, Codable, Identifiable, Sendable {
         case .speed: return "Move faster across the map. +12% movement per rank."
         }
     }
-    public static let maxRank = 3
-    public static func cost(rank: Int) -> Int { 60 + rank * 70 }
+    // Existing rank 1–3 purchases and their effects remain unchanged in saved games.
+    public static let maxRank = 5
+    private static let prices = [60, 130, 200, 450, 900]
+    public static func cost(rank: Int) -> Int { prices[min(max(0, rank), prices.count - 1)] }
 }
 
 public struct Progress: Codable, Equatable, Sendable {
@@ -182,7 +184,7 @@ public struct Level: Identifiable, Sendable {
             center: Coordinate(41.8870, -87.6320), latitudeSpan: 0.021, longitudeSpan: 0.023,
             growth: 1.0, loss: 3.3, reward: 440,
             quests: [
-                Quest(kind: .strength, target: 4), Quest(kind: .destruction, target: 38),
+                Quest(kind: .strength, target: 5), Quest(kind: .destruction, target: 38),
                 Quest(kind: .survival, target: 100),
             ],
             anchors: [

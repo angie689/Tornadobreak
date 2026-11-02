@@ -7,6 +7,7 @@ final class TornadoScene: SKScene {
     weak var session: GameSession?
     private(set) var simulation: Simulation
     private let ground = SKNode()
+    private var weatherZoneNodes: [SKShapeNode] = []
     private let objectsLayer = SKNode()
     private let effects = SKNode()
     private let tornado = SKNode()
@@ -54,6 +55,7 @@ final class TornadoScene: SKScene {
         let delta = min(max(currentTime - previousTime, 0), 0.05)
         guard !isPaused else { return }
         let result = simulation.step(delta: delta, direction: direction)
+        updateWeatherZoneNodes()
         for id in result.destroyed { destroy(id) }
         updateLiftingObjects()
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
@@ -83,7 +85,7 @@ final class TornadoScene: SKScene {
         gridNode.strokeColor = .white.withAlphaComponent(0.06)
         gridNode.lineWidth = 1
         ground.addChild(gridNode)
-        for zone in simulation.level.zones {
+        for zone in simulation.weatherZones {
             let ring = SKShapeNode(circleOfRadius: zone.radius)
             ring.position = CGPoint(x: zone.center.x, y: zone.center.y)
             let color: UIColor = zone.favorable ? .systemMint : .systemBlue
@@ -92,6 +94,7 @@ final class TornadoScene: SKScene {
             ring.lineWidth = 3
             ring.zPosition = 1
             ground.addChild(ring)
+            weatherZoneNodes.append(ring)
             let label = SKLabelNode(fontNamed: "AvenirNext-DemiBold")
             label.text = zone.favorable ? "WARM + MOIST" : "COOL + DRY"
             label.fontSize = 17
@@ -104,6 +107,13 @@ final class TornadoScene: SKScene {
         border.lineWidth = 5
         border.zPosition = 2
         ground.addChild(border)
+    }
+    private func updateWeatherZoneNodes() {
+        // Move only the ring nodes; labels travel with each ring as children.
+        // No new SpriteKit objects or textures are allocated per update.
+        for (node, zone) in zip(weatherZoneNodes, simulation.weatherZones) {
+            node.position = CGPoint(x: zone.center.x, y: zone.center.y)
+        }
     }
     private func makeObjects() {
         for object in simulation.objects {

@@ -5,19 +5,52 @@ import XCTest
 final class SimulationTests: XCTestCase {
     func testDisplayedWindMatchesEveryEFCategory() {
         let bands = [65...85, 86...110, 111...135, 136...165, 166...200, 201...220]
+        // Moore's calm weather lets us check all six wind categories without fronts.
+        var sim = Simulation(level: Level.all[0])
+        var categories: Set<Int> = []
+        var previousWind = sim.wind
+        for _ in 0..<1100 {
+            _ = sim.step(delta: 0.1, direction: Point(0, 0))
+            categories.insert(sim.ef)
+            XCTAssertTrue(bands[sim.ef].contains(sim.wind), "EF\(sim.ef) with \(sim.wind) mph")
+            XCTAssertGreaterThanOrEqual(sim.wind, previousWind)
+            previousWind = sim.wind
+        }
+        XCTAssertEqual(categories, Set(0...5))
+    }
+    func testWeatherMovesOnlyInHarderCitiesAndTracksElapsedTime() {
         for level in Level.all {
             var sim = Simulation(level: level)
-            var categories: Set<Int> = []
-            var previousWind = sim.wind
-            for _ in 0..<1100 {
+            let start = sim.weatherZones.map(\.center)
+            for _ in 0..<260 {
                 _ = sim.step(delta: 0.1, direction: Point(0, 0))
-                categories.insert(sim.ef)
-                XCTAssertTrue(bands[sim.ef].contains(sim.wind), "EF\(sim.ef) with \(sim.wind) mph")
-                XCTAssertGreaterThanOrEqual(sim.wind, previousWind)
-                previousWind = sim.wind
             }
-            XCTAssertEqual(categories, Set(0...5))
+            let now = sim.weatherZones.map(\.center)
+            if level.id == "moore" {
+                XCTAssertEqual(now, start)
+            } else {
+                XCTAssertNotEqual(now, start, "\(level.name) should have drifting fronts")
+            }
         }
+    }
+    func testCampingInDallasDoesNotBuildStrengthLikeMoving() {
+        let level = Level.all[1]
+        var stationary = Simulation(level: level)
+        var active = Simulation(level: level)
+        for frame in 0..<500 {
+            _ = stationary.step(delta: 0.1, direction: Point(0, 0))
+            let direction = (frame / 10) % 2 == 0 ? Point(1, 0) : Point(-1, 0)
+            _ = active.step(delta: 0.1, direction: direction)
+        }
+        XCTAssertGreaterThan(active.energy, stationary.energy + 10)
+    }
+    func testChicagoRequiresEF5AndCampingCannotWin() {
+        let level = Level.all[2]
+        XCTAssertEqual(level.quests.first(where: { $0.kind == .strength })?.target, 5)
+        var sim = Simulation(level: level)
+        for _ in 0..<1000 { _ = sim.step(delta: 0.1, direction: Point(0, 0)) }
+        XCTAssertLessThan(sim.peakEF, 5)
+        XCTAssertFalse(sim.finished)
     }
     func testLiftFeedbackOnlyAppliesToReachableObjects() {
         var sim = Simulation(level: Level.all[0])
@@ -48,8 +81,8 @@ final class SimulationTests: XCTestCase {
     func testColdAirWeakensAndStabilityReducesLoss() {
         var progress = TornadoCore.Progress()
         progress.upgrades[Upgrade.stability.rawValue] = 3
-        var base = Simulation(level: Level.all[2])
-        var stable = Simulation(level: Level.all[2], progress: progress)
+        var base = Simulation(level: Level.all[0])
+        var stable = Simulation(level: Level.all[0], progress: progress)
         for _ in 0..<700 {
             _ = base.step(delta: 0.1, direction: Point(0, 0))
             _ = stable.step(delta: 0.1, direction: Point(0, 0))
@@ -87,7 +120,10 @@ final class SimulationTests: XCTestCase {
         steer(&sim, to: block.position, steps: 80)
         XCTAssertFalse(sim.objects[block.id].destroyed, "A weak funnel must not lift a block")
         steer(&sim, to: level.start, steps: 80)
-        for _ in 0..<950 { _ = sim.step(delta: 0.1, direction: Point(0, 0)) }
+        for _ in 0..<1700 {
+            let destination = sim.weatherZones.first!.center
+            _ = sim.step(delta: 0.1, direction: vector(from: sim.position, to: destination))
+        }
         var occurrences = 0
         for _ in 0..<160 {
             let result = sim.step(delta: 0.1, direction: vector(from: sim.position, to: block.position))
@@ -107,14 +143,17 @@ final class SimulationTests: XCTestCase {
     func testEveryLevelIsCompletableWithActualMovementAndDestruction() {
         for level in Level.all {
             var sim = Simulation(level: level)
-            // Grow in the starting warm zone, then seek nearby objects.
-            for _ in 0..<950 { _ = sim.step(delta: 0.1, direction: Point(0, 0)) }
+            // Pursue the drifting warm zone so the tougher cities grow naturally.
+            for _ in 0..<1700 {
+                let destination = sim.weatherZones.first!.center
+                _ = sim.step(delta: 0.1, direction: vector(from: sim.position, to: destination))
+            }
             var destroyedKinds: Set<ObjectKind> = []
             for _ in 0..<12000 {
                 if sim.finished || sim.dissipated { break }
                 let target: Point
-                if sim.energy < 55 {
-                    target = level.start
+                if sim.energy < 78 {
+                    target = sim.weatherZones.first!.center
                 } else if let next = sim.objects.filter({ !$0.destroyed && $0.kind.resistance <= sim.liftingPower })
                     .min(by: { $0.position.distance(to: sim.position) < $1.position.distance(to: sim.position) })
                 {

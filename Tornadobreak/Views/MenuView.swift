@@ -109,7 +109,7 @@ struct LevelSelectView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text("Choose your outbreak").font(.headline)
                     Spacer(minLength: 5)
-                    Text("Three cities · three objectives each")
+                    Text("Three cities · changing weather")
                         .font(.caption)
                         .foregroundStyle(Theme.muted)
                 }
@@ -127,8 +127,8 @@ struct LevelSelectView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Label("How to play", systemImage: "hand.draw.fill")
                         .font(.caption.bold())
-                    Text("Drag the joystick to steer. Green weather strengthens your tornado; blue weather weakens it. Pass near objects to destroy them.")
-                    Text("Finish all three quests in one run. Progress and coins are saved automatically.")
+                    Text("Drag the joystick to steer. Follow moving green weather in Dallas and Chicago; blue weather weakens you. Heavy debris costs energy.")
+                    Text("Finish all three quests in one run. Keep moving to grow; coins and upgrades save automatically.")
                 }
                 .font(.caption2)
                 .foregroundStyle(Theme.muted)
@@ -202,7 +202,7 @@ struct UpgradesView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text("A stronger next run.").font(.headline)
                     Spacer(minLength: 4)
-                    Text("Permanent upgrades · three ranks each")
+                    Text("Permanent upgrades · five ranks each")
                         .font(.caption)
                         .foregroundStyle(Theme.muted)
                 }
@@ -244,7 +244,7 @@ struct UpgradesView: View {
                     .font(.caption2)
                     .foregroundStyle(Theme.muted)
             }
-            .accessibilityLabel("Rank \(rank) of 3")
+            .accessibilityLabel("Rank \(rank) of \(Upgrade.maxRank)")
             Text(upgrade.detail)
                 .font(.caption)
                 .foregroundStyle(Theme.muted)

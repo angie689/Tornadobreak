@@ -39,6 +39,12 @@ final class GameSession: ObservableObject {
     func receive(_ simulation: Simulation, result: StepResult, publishHUD: Bool) {
         let reward = store.record(result, simulation: simulation)
         runCoins += reward.coins
+        if result.destroyed.contains(where: { id in
+            let kind = simulation.objects[id].kind
+            return kind == .house || kind == .block
+        }) {
+            toast = "Heavy debris temporarily weakens the tornado"
+        }
         if !result.newQuests.isEmpty { toast = "Objective complete · progress saved" }
         if publishHUD || result.finished || simulation.dissipated || !result.newQuests.isEmpty {
             self.simulation = simulation

@@ -158,7 +158,7 @@ private struct GameRunView: View {
         Canvas { context, size in
             let scaleX = size.width / Level.worldSize.x
             let scaleY = size.height / Level.worldSize.y
-            for zone in session.level.zones {
+            for zone in session.simulation.weatherZones {
                 let rect = CGRect(
                     x: (zone.center.x - zone.radius) * scaleX,
                     y: (Level.worldSize.y - zone.center.y - zone.radius) * scaleY,

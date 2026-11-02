@@ -7,11 +7,14 @@ designed around the iPhone 11 Pro Max in either landscape orientation.
 ## Play
 
 Drag the thumbstick to steer. Warm, moist **green** zones build energy; cool, dry
-**blue** zones drain it. The overview map shows your position and weather zones.
+**blue** zones drain it. Moore has stable beginner weather; green and blue
+weather zones drift in Dallas and Chicago. Camping in one place becomes much less
+effective in those cities, and the minimap shows moving zones.
 Grow from EF0 to EF5: the funnel widens, wind increases, and more objects become
 liftable. Pass close to trees, cars, homes, and larger buildings to break them
 apart. Trees and cars rise and pull toward the funnel before breaking; heavier
-buildings shake as they take damage. Heavier objects take more strength and time.
+buildings shake as they take damage. Heavier objects take more strength and time,
+and large debris slightly drains tornado energy (especially in Chicago).
 
 Finish all three objectives in one run to complete a level:
 
@@ -19,7 +22,7 @@ Finish all three objectives in one run to complete a level:
 |---|---|---|---|---|---|
 | Moore, Oklahoma | Easy | EF2 | 18 | 60 s | 200 / 50 |
 | Dallas, Texas | Medium | EF3 | 28 | 85 s | 320 / 80 |
-| Chicago, Illinois | Hard | EF4 | 38 | 100 s | 440 / 110 |
+| Chicago, Illinois | Hard | EF5 | 38 | 100 s | 440 / 110 |
 
 Destruction pays 1/3/7/12 TC for trees/cars/houses/buildings. Each objective gives
 20 TC **once per level**. First completion pays 100%; all subsequent completions
@@ -29,8 +32,10 @@ its earned coins. At zero energy, reaching better air within 8 seconds can save
 you; the low-energy banner counts down those last seconds. Backgrounding pauses
 automatically; resume explicitly when you return.
 
-Only three upgrades: Suction (+10% lift/rank), Stability (14% less loss/rank),
-Speed (+12% movement/rank). Each has three ranks costing 60, 130, and 200 TC.
+Three permanent upgrade tracks: Suction (+10% lift/rank), Stability (14% less dry-air
+loss/rank), and Speed (+12% movement/rank). Each now has **five** ranks, costing
+60, 130, 200, 450, and 900 TC; previous three-rank saves remain valid.
+Even destroying every object in Moore and Dallas cannot buy every rank.
 All locations are available immediately. Upgrades help but are not mandatory.
 
 ### Geography and weather
@@ -67,7 +72,7 @@ The workflow runs two jobs in parallel on macOS 15 Intel with Xcode 16.4:
   Compiled core tests are cached by compiler, architecture, and source content;
   the tests still execute on every build.
 - **Native app and UI checks** runs app integration and UI tests on an installed
-  simulator matching Xcode's iOS SDK. Boot overlaps test compilation. Individual
+  simulator matching Xcode's iOS SDK. Boot happens after test compilation. Individual
   tests and simulator steps have time limits so a stalled simulator fails promptly.
   Core tests are not compiled and run a second time inside the simulator app.
 
