@@ -14,7 +14,16 @@ def verify_ipa(data):
         info_path = "Payload/Tornadobreak.app/Info.plist"
         info = plistlib.loads(ipa.read(info_path))
         assert info["CFBundleIdentifier"] == "com.angie689.Tornadobreak"
-        assert info["CFBundleShortVersionString"] == "1.0"
+        # Match XcodeGen's current MARKETING_VERSION instead of a hardcoded 1.0.
+        versions = [
+            line.partition(":")[2].strip().strip('"').strip("'")
+            for line in Path("project.yml").read_text(encoding="utf-8").splitlines()
+            if line.strip().partition(":")[0] == "MARKETING_VERSION"
+        ]
+        assert len(versions) == 1 and versions[0], "Expected one MARKETING_VERSION in project.yml"
+        assert info["CFBundleShortVersionString"] == versions[0], (
+            f"IPA version {info['CFBundleShortVersionString']} does not match project.yml ({versions[0]})"
+        )
         assert info["CFBundlePackageType"] == "APPL"
         assert info.get("MinimumOSVersion") == "16.0"
         assert "iPhoneOS" in info.get("CFBundleSupportedPlatforms", []), "Expected a device build"
