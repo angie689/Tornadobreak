@@ -54,6 +54,18 @@ final class AppTests: XCTestCase {
             scene.stop()
         }
     }
+    func testEveryCityBuildsAScene() async {
+        await MainActor.run {
+            for level in Level.all {
+                let scene = TornadoScene(level: level, progress: TornadoCore.Progress())
+                let view = SKView(frame: CGRect(x: 0, y: 0, width: 896, height: 414))
+                view.presentScene(scene)
+                XCTAssertNotNil(scene.childNode(withName: "//vortexSprite"), level.name)
+                XCTAssertNotNil(scene.childNode(withName: "//object-119"), level.name)
+                scene.stop()
+            }
+        }
+    }
     func testOnlyLandscapeOrientationsAreSupported() {
         let orientations = Bundle(for: TornadoScene.self)
             .object(forInfoDictionaryKey: "UISupportedInterfaceOrientations") as? [String]

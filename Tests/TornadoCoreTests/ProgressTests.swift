@@ -37,6 +37,16 @@ final class ProgressTests: XCTestCase {
         XCTAssertEqual(restored.coins, 0)
     }
 
+    func testOlderSavesWithoutNewCitiesStillDecode() throws {
+        let json = #"{"coins":42,"completedLevels":["moore","chicago"],"claimedQuests":["moore.strength"],"upgrades":{"suction":2}}"#
+        var progress = try JSONDecoder().decode(TornadoCore.Progress.self, from: Data(json.utf8))
+        XCTAssertEqual(progress.coins, 42)
+        XCTAssertEqual(progress.rank(.suction), 2)
+        let wichita = Level.all.first { $0.id == "wichita" }!
+        XCTAssertEqual(progress.complete(wichita), wichita.reward, "New cities pay in full the first time")
+        XCTAssertEqual(progress.completedLevels, ["moore", "chicago", "wichita"])
+    }
+
     func testTwoCitiesCannotFundEveryUpgradeEvenIfEveryObjectIsDestroyed() {
         let earlyLevels = Array(Level.all.prefix(2))
         let maxEarlyIncome = earlyLevels.reduce(0) { subtotal, level in

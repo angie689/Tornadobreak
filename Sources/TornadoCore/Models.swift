@@ -115,6 +115,42 @@ public struct Quest: Identifiable, Sendable {
     public var bonus: Int { 20 }
 }
 
+/// Which object types fill each cluster of 15. Slot patterns repeat every five objects.
+public enum ObjectMix: Sendable {
+    case suburban, mixed, urban
+    public func kind(slot: Int) -> ObjectKind {
+        let slots: [ObjectKind]
+        switch self {
+        case .suburban: slots = [.tree, .tree, .car, .house, .house]
+        case .mixed: slots = [.tree, .tree, .car, .house, .block]
+        case .urban: slots = [.tree, .car, .house, .block, .block]
+        }
+        return slots[slot % 5]
+    }
+}
+
+/// Per-city difficulty levers. The defaults describe Moore's calm, static introductory weather.
+public struct Tuning: Sendable {
+    /// How far weather zones wander, in world units. Zero keeps the weather still.
+    public var drift = 0.0
+    /// Seconds for one full weather cycle.
+    public var driftPeriod = 90.0
+    /// Seconds without steering before warm air stops feeding the tornado. Zero disables the penalty.
+    public var campDelay = 0.0
+    /// Fraction of the city's growth rate earned in mixed air.
+    public var mixedGrowth = 0.22
+    /// Energy lost per second in mixed air (on top of the growth fraction above).
+    public var mixedLoss = 0.0
+    /// Multiplier on the energy cost of destroying houses and buildings.
+    public var debris = 0.5
+    /// Multiplier on the lifting power every object requires.
+    public var resistance = 1.0
+    /// Size multipliers for warm and dry weather zones.
+    public var warmScale = 1.0
+    public var dryScale = 1.0
+    public var mix = ObjectMix.suburban
+}
+
 public struct WeatherZone: Sendable {
     public let center: Point
     public let radius: Double
@@ -133,16 +169,38 @@ public struct Level: Identifiable, Sendable {
     public let loss: Double
     public let reward: Int
     public let quests: [Quest]
-    /// Real street/park reference points; nearby objects are illustrative, not parcel data.
+    /// Cluster reference points; nearby objects are illustrative, not parcel data.
     public let anchors: [Coordinate]
+    public let tuning: Tuning
     public static let worldSize = Point(1100, 1500)
     public var zones: [WeatherZone] {
-        [
+        let base = [
             WeatherZone(center: Point(350, 470), radius: 340, favorable: true),
             WeatherZone(center: Point(820, 1100), radius: 310, favorable: true),
             WeatherZone(center: Point(880, 400), radius: 235, favorable: false),
             WeatherZone(center: Point(250, 1160), radius: 240, favorable: false),
         ]
+        return base.map { zone in
+            WeatherZone(
+                center: zone.center,
+                radius: zone.radius * (zone.favorable ? tuning.warmScale : tuning.dryScale),
+                favorable: zone.favorable)
+        }
+    }
+    /// Eight cluster reference points laid out around a city centre. Flipping the layout gives
+    /// each city a different arrangement relative to its warm and dry weather.
+    static func cityAnchors(_ center: Coordinate, flipLatitude: Bool = false, flipLongitude: Bool = false)
+        -> [Coordinate]
+    {
+        let offsets: [(Double, Double)] = [
+            (-0.0065, -0.0065), (-0.0045, -0.0005), (-0.0005, -0.0075), (0.0010, -0.0005),
+            (0.0045, 0.0035), (0.0075, 0.0065), (-0.0055, 0.0065), (0.0005, 0.0065),
+        ]
+        return offsets.map { latitude, longitude in
+            Coordinate(
+                center.latitude + (flipLatitude ? -latitude : latitude),
+                center.longitude + (flipLongitude ? -longitude : longitude))
+        }
     }
     public var start: Point { Point(350, 470) }
     public func point(for coordinate: Coordinate) -> Point {
@@ -164,7 +222,8 @@ public struct Level: Identifiable, Sendable {
                 Coordinate(35.3396, -97.4940), Coordinate(35.3396, -97.4866),
                 Coordinate(35.3440, -97.4866), Coordinate(35.3460, -97.4800),
                 Coordinate(35.3350, -97.4800), Coordinate(35.3410, -97.4800),
-            ]),
+            ],
+            tuning: Tuning()),
         Level(
             id: "dallas", name: "Dallas", state: "Texas", difficulty: "Medium",
             center: Coordinate(32.7835, -96.7985), latitudeSpan: 0.021, longitudeSpan: 0.023,
@@ -178,7 +237,8 @@ public struct Level: Identifiable, Sendable {
                 Coordinate(32.7830, -96.8060), Coordinate(32.7845, -96.7990),
                 Coordinate(32.7880, -96.7950), Coordinate(32.7910, -96.7920),
                 Coordinate(32.7780, -96.7920), Coordinate(32.7840, -96.7920),
-            ]),
+            ],
+            tuning: Tuning(drift: 215, driftPeriod: 95, campDelay: 14, debris: 1, mix: .mixed)),
         Level(
             id: "chicago", name: "Chicago", state: "Illinois", difficulty: "Hard",
             center: Coordinate(41.8870, -87.6320), latitudeSpan: 0.021, longitudeSpan: 0.023,
@@ -192,6 +252,69 @@ public struct Level: Identifiable, Sendable {
                 Coordinate(41.8860, -87.6390), Coordinate(41.8870, -87.6320),
                 Coordinate(41.8920, -87.6310), Coordinate(41.8940, -87.6250),
                 Coordinate(41.8810, -87.6250), Coordinate(41.8870, -87.6250),
-            ]),
+            ],
+            tuning: Tuning(
+                drift: 300, driftPeriod: 70, campDelay: 14, mixedGrowth: 0.08, debris: 1.5, mix: .urban)),
+        Level(
+            id: "wichita", name: "Wichita", state: "Kansas", difficulty: "Expert",
+            center: Coordinate(37.6872, -97.3301), latitudeSpan: 0.021, longitudeSpan: 0.023,
+            growth: 0.95, loss: 3.5, reward: 580,
+            quests: [
+                Quest(kind: .strength, target: 5), Quest(kind: .destruction, target: 46),
+                Quest(kind: .survival, target: 110),
+            ],
+            anchors: Level.cityAnchors(Coordinate(37.6872, -97.3301), flipLongitude: true),
+            tuning: Tuning(
+                drift: 330, driftPeriod: 62, campDelay: 12, mixedGrowth: 0.05, mixedLoss: 0.35,
+                debris: 1.8, warmScale: 0.95, dryScale: 1.05, mix: .mixed)),
+        Level(
+            id: "joplin", name: "Joplin", state: "Missouri", difficulty: "Brutal",
+            center: Coordinate(37.0842, -94.5133), latitudeSpan: 0.021, longitudeSpan: 0.023,
+            growth: 0.90, loss: 3.7, reward: 740,
+            quests: [
+                Quest(kind: .strength, target: 5), Quest(kind: .destruction, target: 54),
+                Quest(kind: .survival, target: 120),
+            ],
+            anchors: Level.cityAnchors(Coordinate(37.0842, -94.5133), flipLatitude: true),
+            tuning: Tuning(
+                drift: 360, driftPeriod: 58, campDelay: 10, mixedGrowth: 0, mixedLoss: 0.55,
+                debris: 2.0, resistance: 1.05, warmScale: 0.92, dryScale: 1.10, mix: .mixed)),
+        Level(
+            id: "nashville", name: "Nashville", state: "Tennessee", difficulty: "Extreme",
+            center: Coordinate(36.1627, -86.7816), latitudeSpan: 0.021, longitudeSpan: 0.023,
+            growth: 0.88, loss: 3.9, reward: 920,
+            quests: [
+                Quest(kind: .strength, target: 5), Quest(kind: .destruction, target: 60),
+                Quest(kind: .survival, target: 130),
+            ],
+            anchors: Level.cityAnchors(
+                Coordinate(36.1627, -86.7816), flipLatitude: true, flipLongitude: true),
+            tuning: Tuning(
+                drift: 390, driftPeriod: 54, campDelay: 9, mixedGrowth: 0, mixedLoss: 0.65,
+                debris: 2.2, resistance: 1.08, warmScale: 0.90, dryScale: 1.12, mix: .mixed)),
+        Level(
+            id: "atlanta", name: "Atlanta", state: "Georgia", difficulty: "Nightmare",
+            center: Coordinate(33.7490, -84.3880), latitudeSpan: 0.021, longitudeSpan: 0.023,
+            growth: 0.85, loss: 4.1, reward: 1120,
+            quests: [
+                Quest(kind: .strength, target: 5), Quest(kind: .destruction, target: 66),
+                Quest(kind: .survival, target: 140),
+            ],
+            anchors: Level.cityAnchors(Coordinate(33.7490, -84.3880)),
+            tuning: Tuning(
+                drift: 410, driftPeriod: 52, campDelay: 8, mixedGrowth: 0, mixedLoss: 0.75,
+                debris: 2.4, resistance: 1.10, warmScale: 0.88, dryScale: 1.15, mix: .urban)),
+        Level(
+            id: "newyork", name: "New York", state: "New York", difficulty: "Legendary",
+            center: Coordinate(40.7580, -73.9855), latitudeSpan: 0.021, longitudeSpan: 0.023,
+            growth: 0.82, loss: 4.3, reward: 1360,
+            quests: [
+                Quest(kind: .strength, target: 5), Quest(kind: .destruction, target: 72),
+                Quest(kind: .survival, target: 150),
+            ],
+            anchors: Level.cityAnchors(Coordinate(40.7580, -73.9855), flipLongitude: true),
+            tuning: Tuning(
+                drift: 430, driftPeriod: 50, campDelay: 7, mixedGrowth: 0, mixedLoss: 0.85,
+                debris: 2.6, resistance: 1.12, warmScale: 0.85, dryScale: 1.20, mix: .urban)),
     ]
 }

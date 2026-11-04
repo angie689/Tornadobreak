@@ -72,7 +72,7 @@ struct MenuView: View {
                 Spacer()
                 CoinPill(amount: store.progress.coins)
             }
-            Text("Chase warm air, grow stronger, and tear through three real cities.")
+            Text("Chase warm air, grow stronger, and tear through eight real cities.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.muted)
                 .fixedSize(horizontal: false, vertical: true)
@@ -89,7 +89,7 @@ struct MenuView: View {
                 Label("Upgrades", systemImage: "slider.horizontal.3")
             }
             .buttonStyle(SecondaryButtonStyle())
-            Text("V1.0 · SINGLE PLAYER · LOCAL SAVES")
+            Text("V1.1 · SINGLE PLAYER · LOCAL SAVES")
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(Theme.muted)
                 .lineLimit(1)
@@ -109,7 +109,7 @@ struct LevelSelectView: View {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text("Choose your outbreak").font(.headline)
                     Spacer(minLength: 5)
-                    Text("Three cities · changing weather")
+                    Text("Eight cities · changing weather")
                         .font(.caption)
                         .foregroundStyle(Theme.muted)
                 }
@@ -127,7 +127,7 @@ struct LevelSelectView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Label("How to play", systemImage: "hand.draw.fill")
                         .font(.caption.bold())
-                    Text("Drag the joystick to steer. Follow moving green weather in Dallas and Chicago; blue weather weakens you. Heavy debris costs energy.")
+                    Text("Drag the joystick to steer. Follow moving green weather in every city after Moore; blue weather weakens you. Heavy debris costs energy, and in the toughest cities even mixed air drains you.")
                     Text("Finish all three quests in one run. Keep moving to grow; coins and upgrades save automatically.")
                 }
                 .font(.caption2)
@@ -151,7 +151,9 @@ struct LevelSelectView: View {
 
     private func levelCard(_ level: Level) -> some View {
         let done = store.progress.completedLevels.contains(level.id)
-        let color: Color = level.id == "moore" ? Theme.mint : level.id == "dallas" ? .orange : .purple
+        let palette: [Color] = [Theme.mint, .orange, .purple, .pink, .red, .cyan, .white, .yellow]
+        let tier = Level.all.firstIndex(where: { $0.id == level.id }) ?? 0
+        let color = palette[min(tier, palette.count - 1)]
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
                 Text(level.difficulty.uppercased())

@@ -16,13 +16,18 @@ apart. Trees and cars rise and pull toward the funnel before breaking; heavier
 buildings shake as they take damage. Heavier objects take more strength and time,
 and large debris slightly drains tornado energy (especially in Chicago).
 
-Finish all three objectives in one run to complete a level:
+Finish all three objectives in one run to complete a level. Eight cities, easiest to hardest:
 
-| Location | Difficulty | Strength | Destruction | Survival | First / replay TC |
-|---|---|---|---|---|---|
-| Moore, Oklahoma | Easy | EF2 | 18 | 60 s | 200 / 50 |
-| Dallas, Texas | Medium | EF3 | 28 | 85 s | 320 / 80 |
-| Chicago, Illinois | Hard | EF5 | 38 | 100 s | 440 / 110 |
+| Location            | Difficulty | Strength | Destruction | Survival | First / replay TC |
+|---------------------|------------|----------|-------------|----------|-------------------|
+| Moore, Oklahoma     | Easy       | EF2      | 18          | 60 s     | 200 / 50          |
+| Dallas, Texas       | Medium     | EF3      | 28          | 85 s     | 320 / 80          |
+| Chicago, Illinois   | Hard       | EF5      | 38          | 100 s    | 440 / 110         |
+| Wichita, Kansas     | Expert     | EF5      | 46          | 110 s    | 580 / 145         |
+| Joplin, Missouri    | Brutal     | EF5      | 54          | 120 s    | 740 / 185         |
+| Nashville, Tennessee| Extreme    | EF5      | 60          | 130 s    | 920 / 230         |
+| Atlanta, Georgia    | Nightmare  | EF5      | 66          | 140 s    | 1120 / 280        |
+| New York, New York  | Legendary  | EF5      | 72          | 150 s    | 1360 / 340        |
 
 Destruction pays 1/3/7/12 TC for trees/cars/houses/buildings. Each objective gives
 20 TC **once per level**. First completion pays 100%; all subsequent completions
@@ -112,8 +117,8 @@ scripts/package_ipa.sh
 Use an installed simulator name. CI chooses an installed iPhone on the active SDK's
 runtime; it does not choose a newer, unrelated runtime or download another one.
 Core tests run with Swift 5.9+ on Linux or macOS. The app and UI tests require
-Apple's SDKs. Tests cover growth, weather loss, dissipation, controls/bounds,
-upgrades, completion of all three levels, one-time rewards, replay payout,
+Apple's SDKs. Difficulty levers live in each level's `Tuning` (weather drift, camping delay, mixed-air drain, debris cost, object sturdiness, zone sizes). Tests cover growth, weather loss, dissipation, controls/bounds,
+upgrades, completion of all eight levels, the difficulty ladder, no-camping wins, one-time rewards, replay payout,
 serialization, local save/reload, scene construction, visible lifting, EF/wind
 consistency, and menu/pause navigation.
 
@@ -123,6 +128,6 @@ No accounts, ads, shops, multiplayer, analytics, paid maps, or additional curren
 Cars and trees use custom, transparent player-designed sprite art. Houses and the tornado
 keep their original visuals. The tornado uses an eight-frame transparent animated vortex atlas, retaining
 natural EF0–EF5 growth and a small capped debris burst. No fluid simulation or fragment physics. There are 120 destructibles
-per level and the HUD refreshes at 10 Hz. Sound, haptics, run resumption after
-termination, and additional maps are outside version 1.0.
+per level and the HUD refreshes at 10 Hz. Sound, haptics, and run resumption after
+termination are outside this version.
 

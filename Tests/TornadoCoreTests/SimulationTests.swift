@@ -154,7 +154,7 @@ final class SimulationTests: XCTestCase {
                 let target: Point
                 if sim.energy < 78 {
                     target = sim.weatherZones.first!.center
-                } else if let next = sim.objects.filter({ !$0.destroyed && $0.kind.resistance <= sim.liftingPower })
+                } else if let next = sim.objects.filter({ !$0.destroyed && sim.requiredPower(for: $0) <= sim.liftingPower })
                     .min(by: { $0.position.distance(to: sim.position) < $1.position.distance(to: sim.position) })
                 {
                     target = next.position
@@ -174,6 +174,72 @@ final class SimulationTests: XCTestCase {
             let event = sim.step(delta: 0.1, direction: Point(0, 0))
             XCTAssertFalse(event.finished, "Completion is emitted exactly once")
             XCTAssertEqual(count, sim.destroyedCount)
+        }
+    }
+    func testEightCitiesRampUpInEveryWay() {
+        let levels = Level.all
+        XCTAssertEqual(levels.count, 8)
+        XCTAssertEqual(Set(levels.map(\.id)).count, levels.count)
+        XCTAssertEqual(
+            levels.map(\.difficulty),
+            ["Easy", "Medium", "Hard", "Expert", "Brutal", "Extreme", "Nightmare", "Legendary"])
+        for (easier, harder) in zip(levels, levels.dropFirst()) {
+            XCTAssertGreaterThan(harder.reward, easier.reward, harder.name)
+            XCTAssertLessThanOrEqual(harder.growth, easier.growth, harder.name)
+            XCTAssertGreaterThanOrEqual(harder.loss, easier.loss, harder.name)
+            XCTAssertGreaterThanOrEqual(harder.tuning.debris, easier.tuning.debris, harder.name)
+            XCTAssertGreaterThanOrEqual(harder.tuning.drift, easier.tuning.drift, harder.name)
+            XCTAssertLessThanOrEqual(harder.tuning.warmScale, easier.tuning.warmScale, harder.name)
+            for kind in QuestKind.allCases {
+                let before = easier.quests.first { $0.kind == kind }!.target
+                let after = harder.quests.first { $0.kind == kind }!.target
+                XCTAssertGreaterThanOrEqual(after, before, "\(harder.name) \(kind)")
+            }
+        }
+        for level in levels.dropFirst(2) {
+            XCTAssertEqual(level.quests.first { $0.kind == .strength }?.target, 5, level.name)
+        }
+    }
+    func testNoHardCityCanBeWonByCamping() {
+        for level in Level.all.dropFirst(2) {
+            var sim = Simulation(level: level)
+            for _ in 0..<1000 { _ = sim.step(delta: 0.1, direction: Point(0, 0)) }
+            XCTAssertLessThan(sim.peakEF, 5, level.name)
+            XCTAssertFalse(sim.finished, level.name)
+        }
+    }
+    func testLaterCitiesDemandMoreLiftingPower() {
+        let moore = Simulation(level: Level.all[0])
+        let newYork = Simulation(level: Level.all[7])
+        let block = newYork.objects.first { $0.kind == .block }!
+        XCTAssertEqual(moore.requiredPower(for: block), ObjectKind.block.resistance)
+        XCTAssertGreaterThan(newYork.requiredPower(for: block), ObjectKind.block.resistance)
+        XCTAssertLessThan(newYork.requiredPower(for: block), 100, "EF5 must still be able to lift it")
+    }
+    func testOriginalThreeCitiesKeepTheirTuning() {
+        let moore = Level.all[0].tuning
+        XCTAssertEqual(moore.drift, 0)
+        XCTAssertEqual(moore.campDelay, 0)
+        XCTAssertEqual(moore.mixedLoss, 0)
+        XCTAssertEqual(moore.debris, 0.5)
+        let dallas = Level.all[1].tuning
+        XCTAssertEqual(dallas.drift, 215)
+        XCTAssertEqual(dallas.driftPeriod, 95)
+        XCTAssertEqual(dallas.campDelay, 14)
+        XCTAssertEqual(dallas.debris, 1)
+        let chicago = Level.all[2].tuning
+        XCTAssertEqual(chicago.drift, 300)
+        XCTAssertEqual(chicago.driftPeriod, 70)
+        XCTAssertEqual(chicago.mixedGrowth, 0.08)
+        XCTAssertEqual(chicago.debris, 1.5)
+    }
+    func testEveryCityStartsInWarmAirAndHasEnoughObjectsForItsQuest() {
+        for level in Level.all {
+            let sim = Simulation(level: level)
+            XCTAssertEqual(sim.weather, .warm, level.name)
+            let target = level.quests.first { $0.kind == .destruction }!.target
+            let reachable = sim.objects.filter { sim.requiredPower(for: $0) < 100 }.count
+            XCTAssertGreaterThan(reachable, target + 20, level.name)
         }
     }
     func testDissipationStopsTheRun() {

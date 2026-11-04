@@ -54,13 +54,9 @@ public struct Simulation {
     /// Weather drifts during the run; Moore remains static as the introductory level.
     /// All offsets start at zero, so a fresh run always begins in favorable air.
     public var weatherZones: [WeatherZone] {
-        let drift: Double
-        let period: Double
-        switch level.id {
-        case "chicago": drift = 300; period = 70
-        case "dallas": drift = 215; period = 95
-        default: return level.zones
-        }
+        let drift = level.tuning.drift
+        let period = level.tuning.driftPeriod
+        guard drift > 0, period > 0 else { return level.zones }
         let phase = elapsed * 2 * Double.pi / period
         return level.zones.enumerated().map { index, zone in
             let offset = Double(index)
@@ -93,9 +89,13 @@ public struct Simulation {
         case .survival: return Int(elapsed)
         }
     }
+    /// Lifting power an object needs in this city; later cities use sturdier buildings.
+    public func requiredPower(for object: WorldObject) -> Double {
+        object.kind.resistance * level.tuning.resistance
+    }
     public func canLift(_ object: WorldObject) -> Bool {
         !object.destroyed && position.distance(to: object.position) <= radius + 9
-            && liftingPower >= object.kind.resistance
+            && liftingPower >= requiredPower(for: object)
     }
     /// Direction is a normalized virtual joystick vector. Simulation time freezes while paused.
     public mutating func step(delta: Double, direction: Point) -> StepResult {
@@ -118,9 +118,10 @@ public struct Simulation {
         switch weather {
         case .warm:
             // In Dallas and Chicago, camping in one spot stops being an easy EF5 strategy.
-            rate = level.growth * (level.id != "moore" && stationaryTime > 14 ? 0.12 : 1)
+            let delay = level.tuning.campDelay
+            rate = level.growth * (delay > 0 && stationaryTime > delay ? 0.12 : 1)
         case .mixed:
-            rate = level.growth * (level.id == "chicago" ? 0.08 : 0.22)
+            rate = level.growth * level.tuning.mixedGrowth - level.tuning.mixedLoss
         case .dry: rate = -level.loss * (1 - 0.14 * Double(ranks[.stability, default: 0]))
         }
         energy = min(100, max(0, energy + rate * dt))
@@ -143,8 +144,7 @@ public struct Simulation {
                 // Large debris loads disrupt the circulation; trees and cars stay cheap.
                 if object.kind == .house || object.kind == .block {
                     let load = object.kind == .block ? 1.2 : 0.45
-                    let difficulty = level.id == "chicago" ? 1.5 : (level.id == "dallas" ? 1 : 0.5)
-                    energy = max(0, energy - load * difficulty)
+                    energy = max(0, energy - load * level.tuning.debris)
                 }
             }
         }
@@ -160,7 +160,7 @@ public struct Simulation {
     }
     private static func makeObjects(_ level: Level) -> [WorldObject] {
         var objects: [WorldObject] = []
-        // Stable small clusters anchored to surveyed map coordinates. Decorative offsets are in world units.
+        // Stable small clusters anchored to map reference coordinates. Decorative offsets are in world units.
         for (cluster, coordinate) in level.anchors.enumerated() {
             let anchor = level.point(for: coordinate)
             for index in 0..<15 {
@@ -169,16 +169,7 @@ public struct Simulation {
                 let point = Point(
                     min(max(35, anchor.x + cos(angle) * distance), Level.worldSize.x - 35),
                     min(max(35, anchor.y + sin(angle) * distance), Level.worldSize.y - 35))
-                let kind: ObjectKind
-                switch index % 5 {
-                case 1 where level.id == "chicago": kind = .car
-                case 2 where level.id == "chicago": kind = .house
-                case 3 where level.id == "chicago": kind = .block
-                case 0, 1: kind = .tree
-                case 2: kind = .car
-                case 3: kind = .house
-                default: kind = level.id == "moore" ? .house : .block
-                }
+                let kind = level.tuning.mix.kind(slot: index)
                 objects.append(WorldObject(id: cluster * 15 + index, kind: kind, position: point))
             }
         }
