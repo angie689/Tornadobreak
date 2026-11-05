@@ -8,6 +8,7 @@ final class TornadoScene: SKScene {
     private(set) var simulation: Simulation
     private let ground = SKNode()
     private var weatherZoneNodes: [SKShapeNode] = []
+    private var overlapNodes: [SKShapeNode] = []
     private let objectsLayer = SKNode()
     private let effects = SKNode()
     private let tornado = SKNode()
@@ -56,6 +57,7 @@ final class TornadoScene: SKScene {
         guard !isPaused else { return }
         let result = simulation.step(delta: delta, direction: direction)
         updateWeatherZoneNodes()
+        updateOverlapNodes()
         for id in result.destroyed { destroy(id) }
         updateLiftingObjects()
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
@@ -102,6 +104,18 @@ final class TornadoScene: SKScene {
             label.position = CGPoint(x: 0, y: zone.radius - 45)
             ring.addChild(label)
         }
+        // One reusable ellipse per possible pair of bubbles (four bubbles make six pairs).
+        // Each is scaled and rotated to cover the lens where two bubbles overlap; no per-frame allocation.
+        let pairCount = simulation.weatherZones.count * (simulation.weatherZones.count - 1) / 2
+        for _ in 0..<pairCount {
+            let lens = SKShapeNode(circleOfRadius: 1)
+            lens.lineWidth = 0
+            lens.zPosition = 1.5
+            lens.isHidden = true
+            ground.addChild(lens)
+            overlapNodes.append(lens)
+        }
+        updateOverlapNodes()
         let border = SKShapeNode(rect: CGRect(x: 0, y: 0, width: width, height: height))
         border.strokeColor = .white.withAlphaComponent(0.4)
         border.lineWidth = 5
@@ -113,6 +127,28 @@ final class TornadoScene: SKScene {
         // No new SpriteKit objects or textures are allocated per update.
         for (node, zone) in zip(weatherZoneNodes, simulation.weatherZones) {
             node.position = CGPoint(x: zone.center.x, y: zone.center.y)
+        }
+    }
+    private func updateOverlapNodes() {
+        let overlaps = simulation.weatherOverlaps
+        for (index, node) in overlapNodes.enumerated() {
+            guard index < overlaps.count else {
+                node.isHidden = true
+                continue
+            }
+            let overlap = overlaps[index]
+            let color: UIColor
+            switch overlap.outcome {
+            case .superWarm: color = .systemOrange
+            case .superDry: color = .systemIndigo
+            default: color = .systemYellow
+            }
+            node.isHidden = false
+            node.fillColor = color.withAlphaComponent(0.38)
+            node.position = CGPoint(x: overlap.center.x, y: overlap.center.y)
+            node.zRotation = CGFloat(overlap.angle)
+            node.xScale = CGFloat(max(overlap.halfLength, 1))
+            node.yScale = CGFloat(max(overlap.halfWidth, 1))
         }
     }
     private func makeObjects() {

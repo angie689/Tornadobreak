@@ -6,10 +6,25 @@ designed around the iPhone 11 Pro Max in either landscape orientation.
 
 ## Play
 
-Drag the thumbstick to steer. Warm, moist **green** zones build energy; cool, dry
-**blue** zones drain it. Moore has stable beginner weather; green and blue
-weather zones drift in Dallas and Chicago. Camping in one place becomes much less
-effective in those cities, and the minimap shows moving zones.
+Drag the thumbstick to steer. Warm, moist **green** bubbles build energy; cool, dry
+**blue** bubbles drain it. Moore has stable beginner weather; in every city after it
+the bubbles drift, faster and wider as the cities get harder. Camping in one place
+becomes much less effective there, and the minimap shows the moving bubbles. From
+Wichita onward, even mixed air drains energy, warm bubbles shrink, cool bubbles grow,
+and buildings are sturdier, so you must keep chasing the green.
+
+**Overlapping bubbles change the air** (orange, deep-blue and yellow patches on the
+map and minimap):
+
+| Overlap | Air | Effect |
+|---------|-----|--------|
+| warm + warm | Super hot & moist | Energy grows 1.5× as fast |
+| cold + cold | Super cold & dry | Energy drains 1.6× as fast (Stability still helps) |
+| warm + cold | Mixed air | Slow growth in the easier cities; drains in the hardest |
+
+Because a cold bubble can drift over the middle of a warm one, the best air is not
+always at a bubble's centre. Look for clean green, or for two green bubbles overlapping.
+
 Grow from EF0 to EF5: the funnel widens, wind increases, and more objects become
 liftable. Pass close to trees, cars, homes, and larger buildings to break them
 apart. Trees and cars rise and pull toward the funnel before breaking; heavier
@@ -46,8 +61,9 @@ All locations are available immediately. Upgrades help but are not mandatory.
 ### Geography and weather
 
 MapKit loads real street maps for fixed city regions without an API key or location
-permission. Destructible clusters use explicit latitude/longitude reference points
-inside each region; individual offsets and building/tree/car types are **game
+permission. Destructible clusters use latitude/longitude reference points inside each
+region (Moore, Dallas and Chicago use hand-placed points; the five newer cities lay
+eight clusters around the city centre); individual offsets and building/tree/car types are **game
 placements**, not actual parcel inventories. Weather is fictional gameplay data,
 not live weather. EF and wind are simplified game estimates, not safety guidance.
 The wind display stays within the corresponding [NWS EF wind band](https://www.weather.gov/grb/efscale)

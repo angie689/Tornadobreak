@@ -114,15 +114,17 @@ private struct GameRunView: View {
     }
     private var weatherColor: Color {
         switch session.simulation.weather {
+        case .superWarm: return .orange
         case .warm: return Theme.mint
         case .mixed: return .yellow
         case .dry: return .cyan
+        case .superDry: return .blue
         }
     }
     private var controls: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                if session.simulation.energy < 10 && session.simulation.weather == .dry {
+                if session.simulation.energy < 10 && session.simulation.weather.isCold {
                     Text(session.simulation.energy <= 0
                         ? "\(session.simulation.dissipationRemaining)s left · Get to green air!"
                         : "LOW ENERGY · Find green air!")
@@ -158,12 +160,31 @@ private struct GameRunView: View {
         Canvas { context, size in
             let scaleX = size.width / Level.worldSize.x
             let scaleY = size.height / Level.worldSize.y
-            for zone in session.simulation.weatherZones {
-                let rect = CGRect(
+            let zones = session.simulation.weatherZones
+            func rect(_ zone: WeatherZone) -> CGRect {
+                CGRect(
                     x: (zone.center.x - zone.radius) * scaleX,
                     y: (Level.worldSize.y - zone.center.y - zone.radius) * scaleY,
                     width: zone.radius * 2 * scaleX, height: zone.radius * 2 * scaleY)
-                context.fill(Path(ellipseIn: rect), with: .color((zone.favorable ? Theme.mint : .blue).opacity(0.24)))
+            }
+            for zone in zones {
+                context.fill(Path(ellipseIn: rect(zone)), with: .color((zone.favorable ? Theme.mint : .blue).opacity(0.24)))
+            }
+            // Overlaps: hot + hot is orange, cold + cold is deep blue, hot + cold is yellow.
+            for i in zones.indices {
+                for j in zones.indices where j > i {
+                    guard zones[i].center.distance(to: zones[j].center) < zones[i].radius + zones[j].radius else { continue }
+                    let color: Color
+                    switch (zones[i].favorable, zones[j].favorable) {
+                    case (true, true): color = .orange
+                    case (false, false): color = .indigo
+                    default: color = .yellow
+                    }
+                    context.drawLayer { layer in
+                        layer.clip(to: Path(ellipseIn: rect(zones[i])))
+                        layer.fill(Path(ellipseIn: rect(zones[j])), with: .color(color.opacity(0.7)))
+                    }
+                }
             }
             let position = session.simulation.position
             let dot = CGRect(
@@ -172,7 +193,7 @@ private struct GameRunView: View {
         }.frame(width: 85, height: 70).background(Theme.background.opacity(0.9))
             .clipShape(RoundedRectangle(cornerRadius: 9))
             .overlay(RoundedRectangle(cornerRadius: 9).stroke(.white.opacity(0.22)))
-            .accessibilityLabel("Weather overview. Green zones strengthen the tornado.")
+            .accessibilityLabel("Weather overview. Green zones strengthen the tornado. Overlapping green zones are stronger, overlapping blue zones are deadlier, and mixed overlaps are neutral.")
     }
     private var pauseOverlay: some View {
         landscapeOverlay {

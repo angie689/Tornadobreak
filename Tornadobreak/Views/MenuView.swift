@@ -127,7 +127,7 @@ struct LevelSelectView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Label("How to play", systemImage: "hand.draw.fill")
                         .font(.caption.bold())
-                    Text("Drag the joystick to steer. Follow moving green weather in every city after Moore; blue weather weakens you. Heavy debris costs energy, and in the toughest cities even mixed air drains you.")
+                    Text("Drag the joystick to steer. Follow moving green weather in every city after Moore; blue weather weakens you. Overlapping green bubbles make super hot air, overlapping blue bubbles make super cold air, and a green-blue overlap is mixed. Heavy debris costs energy, and in the toughest cities even mixed air drains you.")
                     Text("Finish all three quests in one run. Keep moving to grow; coins and upgrades save automatically.")
                 }
                 .font(.caption2)

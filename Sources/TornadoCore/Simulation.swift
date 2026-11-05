@@ -1,16 +1,35 @@
 import Foundation
 
 public enum Weather: String, Sendable {
+    case superWarm = "Super hot & moist"
     case warm = "Warm & moist"
     case mixed = "Mixed air"
     case dry = "Cool & dry"
+    case superDry = "Super cold & dry"
     public var hint: String {
         switch self {
+        case .superWarm: return "Surging"
         case .warm: return "Strengthening"
         case .mixed: return "Slow growth"
         case .dry: return "Losing energy"
+        case .superDry: return "Collapsing"
         }
     }
+    public var isWarm: Bool { self == .warm || self == .superWarm }
+    public var isCold: Bool { self == .dry || self == .superDry }
+}
+
+/// Where two weather bubbles overlap, drawn as an ellipse that approximates the lens-shaped region.
+public struct WeatherOverlap: Sendable {
+    public let center: Point
+    /// Half the overlap's extent along the line joining the two bubble centres.
+    public let halfLength: Double
+    /// Half the overlap's extent across that line.
+    public let halfWidth: Double
+    /// Direction of the line joining the two bubble centres, in radians.
+    public let angle: Double
+    /// Hot + hot is super hot, cold + cold is super cold, hot + cold is mixed.
+    public let outcome: Weather
 }
 
 public struct StepResult {
@@ -36,6 +55,9 @@ public struct Simulation {
     private var emptyTime: Double = 0
     private var stationaryTime: Double = 0
     public static let thresholds: [Double] = [0, 18, 36, 55, 76, 93]
+    /// Hot bubbles that overlap feed the tornado faster; cold bubbles that overlap drain it faster.
+    public static let superWarmBoost = 1.5
+    public static let superDryPenalty = 1.6
     public var ef: Int { Self.thresholds.lastIndex(where: { energy >= $0 }) ?? 0 }
     /// Gameplay estimate, not a measurement or real-time weather report.
     public var wind: Int {
@@ -70,11 +92,61 @@ public struct Simulation {
                 radius: zone.radius, favorable: zone.favorable)
         }
     }
-    public var weather: Weather {
-        for zone in weatherZones where position.distance(to: zone.center) < zone.radius {
-            return zone.favorable ? .warm : .dry
+    public var weather: Weather { weather(at: position) }
+    /// The air at any point on the map right now, including where bubbles overlap.
+    public func weather(at point: Point) -> Weather { Self.weather(at: point, in: weatherZones) }
+    /// Air rules: hot + hot is super hot, cold + cold is super cold, any hot + cold mix is mixed air.
+    public static func weather(at point: Point, in zones: [WeatherZone]) -> Weather {
+        var warm = 0
+        var cold = 0
+        for zone in zones where point.distance(to: zone.center) < zone.radius {
+            if zone.favorable { warm += 1 } else { cold += 1 }
         }
+        if warm > 0 && cold > 0 { return .mixed }
+        if warm > 1 { return .superWarm }
+        if cold > 1 { return .superDry }
+        if warm == 1 { return .warm }
+        if cold == 1 { return .dry }
         return .mixed
+    }
+    /// Every pair of bubbles that currently overlap, for drawing and for tests.
+    public var weatherOverlaps: [WeatherOverlap] { Self.overlaps(of: weatherZones) }
+    public static func overlaps(of zones: [WeatherZone]) -> [WeatherOverlap] {
+        var result: [WeatherOverlap] = []
+        for i in zones.indices {
+            for j in zones.indices where j > i {
+                let a = zones[i]
+                let b = zones[j]
+                let distance = a.center.distance(to: b.center)
+                guard distance < a.radius + b.radius else { continue }
+                let outcome: Weather
+                switch (a.favorable, b.favorable) {
+                case (true, true): outcome = .superWarm
+                case (false, false): outcome = .superDry
+                default: outcome = .mixed
+                }
+                if distance <= abs(a.radius - b.radius) {
+                    // One bubble sits entirely inside the other: the overlap is the smaller bubble.
+                    let inner = a.radius < b.radius ? a : b
+                    result.append(
+                        WeatherOverlap(
+                            center: inner.center, halfLength: inner.radius, halfWidth: inner.radius,
+                            angle: 0, outcome: outcome))
+                    continue
+                }
+                let along = (distance * distance + a.radius * a.radius - b.radius * b.radius) / (2 * distance)
+                let halfWidth = (a.radius * a.radius - along * along).squareRoot()
+                let halfLength = (a.radius + b.radius - distance) / 2
+                let middle = (distance - b.radius + a.radius) / 2
+                let ux = (b.center.x - a.center.x) / distance
+                let uy = (b.center.y - a.center.y) / distance
+                result.append(
+                    WeatherOverlap(
+                        center: Point(a.center.x + ux * middle, a.center.y + uy * middle),
+                        halfLength: halfLength, halfWidth: halfWidth, angle: atan2(uy, ux), outcome: outcome))
+            }
+        }
+        return result
     }
     public init(level: Level, progress: Progress = Progress()) {
         self.level = level
@@ -115,14 +187,18 @@ public struct Simulation {
         position.x = min(max(24, position.x), Level.worldSize.x - 24)
         position.y = min(max(24, position.y), Level.worldSize.y - 24)
         let rate: Double
+        let camping = level.tuning.campDelay > 0 && stationaryTime > level.tuning.campDelay
+        let stability = 1 - 0.14 * Double(ranks[.stability, default: 0])
         switch weather {
+        case .superWarm:
+            rate = level.growth * Self.superWarmBoost * (camping ? 0.12 : 1)
         case .warm:
-            // In Dallas and Chicago, camping in one spot stops being an easy EF5 strategy.
-            let delay = level.tuning.campDelay
-            rate = level.growth * (delay > 0 && stationaryTime > delay ? 0.12 : 1)
+            // In the harder cities, camping in one spot stops being an easy EF5 strategy.
+            rate = level.growth * (camping ? 0.12 : 1)
         case .mixed:
             rate = level.growth * level.tuning.mixedGrowth - level.tuning.mixedLoss
-        case .dry: rate = -level.loss * (1 - 0.14 * Double(ranks[.stability, default: 0]))
+        case .dry: rate = -level.loss * stability
+        case .superDry: rate = -level.loss * Self.superDryPenalty * stability
         }
         energy = min(100, max(0, energy + rate * dt))
         peakEF = max(peakEF, ef)
