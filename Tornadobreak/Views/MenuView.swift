@@ -196,29 +196,37 @@ struct LevelSelectView: View {
 
 struct UpgradesView: View {
     @EnvironmentObject private var store: ProgressStore
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 12) {
-                    Text("A stronger next run.").font(.headline)
-                    Spacer(minLength: 4)
-                    Text("Permanent upgrades · five ranks each")
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Grow your storm").font(.title2.bold())
+                    Text("Form a funnel, then follow three branches. Each purchase unlocks the next node; all effects are permanent and stack.")
                         .font(.caption)
                         .foregroundStyle(Theme.muted)
                 }
-                LazyVGrid(columns: columns, spacing: 10) {
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 16)
+                upgradeNode(.suction, target: 1)
+                    .frame(maxWidth: 320)
+                connector(active: store.progress.rank(.suction) > 0)
+                // A single root splits visibly into three independent paths.
+                Rectangle()
+                    .fill(Theme.mint.opacity(0.35))
+                    .frame(height: 2)
+                    .padding(.horizontal, 90)
+                    .accessibilityHidden(true)
+                HStack(alignment: .top, spacing: 12) {
                     ForEach(Upgrade.allCases) { upgrade in
-                        upgradeCard(upgrade)
+                        branch(upgrade)
                     }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(16)
         }
         .background(Theme.background)
-        .navigationTitle("Upgrades")
+        .navigationTitle("Tornado upgrade tree")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -227,45 +235,77 @@ struct UpgradesView: View {
         }
     }
 
-    private func upgradeCard(_ upgrade: Upgrade) -> some View {
-        let rank = store.progress.rank(upgrade)
-        let cost = Upgrade.cost(rank: rank)
-        return VStack(alignment: .leading, spacing: 9) {
-            Text(upgrade.title)
-                .font(.headline)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            HStack(spacing: 5) {
-                ForEach(0..<Upgrade.maxRank, id: \.self) { index in
-                    Capsule()
-                        .fill(index < rank ? Theme.mint : Color.white.opacity(0.12))
-                        .frame(width: 24, height: 6)
+    private func branch(_ upgrade: Upgrade) -> some View {
+        VStack(spacing: 0) {
+            connector(active: store.progress.rank(.suction) > 0 || store.progress.rank(upgrade) > 0)
+            Text(upgrade.branchTitle.uppercased())
+                .font(.caption2.bold())
+                .tracking(1)
+                .foregroundStyle(Theme.mint)
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 12)
+            ForEach((upgrade == .suction ? 2 : 1)...Upgrade.maxRank, id: \.self) { target in
+                upgradeNode(upgrade, target: target)
+                if target < Upgrade.maxRank {
+                    connector(active: store.progress.rank(upgrade) >= target)
                 }
-                Spacer()
-                Text("\(rank)/\(Upgrade.maxRank)")
-                    .font(.caption2)
-                    .foregroundStyle(Theme.muted)
             }
-            .accessibilityLabel("Rank \(rank) of \(Upgrade.maxRank)")
-            Text(upgrade.detail)
-                .font(.caption)
-                .foregroundStyle(Theme.muted)
-                .frame(maxWidth: .infinity, minHeight: 39, alignment: .topLeading)
-            Button {
-                store.purchase(upgrade)
-            } label: {
-                Text(rank == Upgrade.maxRank ? "Fully upgraded" : "Upgrade · \(cost) TC")
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func connector(active: Bool) -> some View {
+        Rectangle()
+            .fill(active ? Theme.mint : Color.white.opacity(0.15))
+            .frame(width: 2, height: 20)
+            .accessibilityHidden(true)
+    }
+
+    private func upgradeNode(_ upgrade: Upgrade, target: Int) -> some View {
+        let purchased = store.progress.rank(upgrade) >= target
+        let unlocked = store.progress.isUnlocked(upgrade, rank: target)
+        let affordable = store.progress.canPurchase(upgrade, rank: target)
+        let cost = Upgrade.cost(rank: target - 1)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: purchased ? "checkmark.circle.fill" : unlocked ? "hurricane" : "lock.fill")
+                    .foregroundStyle(purchased || unlocked ? Theme.mint : Theme.muted)
+                    .accessibilityHidden(true)
+                Text(upgrade.nodeTitle(rank: target))
                     .font(.subheadline.bold())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("\(upgrade.title) · rank \(target)/\(Upgrade.maxRank)")
+                .font(.caption2)
+                .foregroundStyle(Theme.muted)
+            Text(upgrade.detail)
+                .font(.caption2)
+                .foregroundStyle(Theme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if !unlocked, let requirement = upgrade.requirement(forRank: target) {
+                Text("Requires \(requirement.upgrade.nodeTitle(rank: requirement.rank))")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button {
+                // Validate the exact visible node as well as the model's next-rank purchase.
+                if store.progress.canPurchase(upgrade, rank: target) { store.purchase(upgrade) }
+            } label: {
+                Text(purchased ? "Purchased" : !unlocked ? "Locked · \(cost) TC" : affordable ? "Buy · \(cost) TC" : "Need \(cost - store.progress.coins) TC")
+                    .font(.caption.bold())
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .buttonStyle(SecondaryButtonStyle())
-            .disabled(rank == Upgrade.maxRank || store.progress.coins < cost)
-            .opacity(rank == Upgrade.maxRank || store.progress.coins < cost ? 0.45 : 1)
-            .accessibilityIdentifier("upgrade-\(upgrade.rawValue)")
+            .disabled(!affordable)
+            .accessibilityIdentifier("upgrade-\(upgrade.rawValue)-\(target)")
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(purchased ? Theme.mint.opacity(0.6) : Color.white.opacity(0.1), lineWidth: 1)
+        }
     }
 }

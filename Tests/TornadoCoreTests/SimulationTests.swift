@@ -44,6 +44,28 @@ final class SimulationTests: XCTestCase {
         }
         XCTAssertGreaterThan(active.energy, stationary.energy + 10)
     }
+    func testHoldingJoystickAgainstBoundaryStillCountsAsCamping() {
+        // This edge is inside warm air; neither copy can move farther west.
+        let level = customLevel(Tuning(campDelay: 1))
+        var blocked = Simulation(level: level)
+        for _ in 0..<30 { _ = blocked.step(delta: 0.1, direction: Point(-1, 0)) }
+        XCTAssertEqual(blocked.position.x, 24)
+        XCTAssertEqual(blocked.weather, .warm)
+        var released = blocked
+        for _ in 0..<40 {
+            _ = blocked.step(delta: 0.1, direction: Point(-1, 0))
+            _ = released.step(delta: 0.1, direction: Point(0, 0))
+        }
+        XCTAssertEqual(blocked.position, released.position)
+        XCTAssertEqual(blocked.energy, released.energy, accuracy: 1e-9)
+        let before = blocked.energy
+        _ = blocked.step(delta: 0.1, direction: Point(-1, 0))
+        XCTAssertEqual(blocked.energy - before, level.growth * 0.12 * 0.1, accuracy: 1e-9)
+        // Moving along the boundary must release the camping penalty again.
+        let beforeMoving = blocked.energy
+        _ = blocked.step(delta: 0.1, direction: Point(0, 1))
+        XCTAssertEqual(blocked.energy - beforeMoving, level.growth * 0.1, accuracy: 1e-9)
+    }
     func testChicagoRequiresEF5AndCampingCannotWin() {
         let level = Level.all[2]
         XCTAssertEqual(level.quests.first(where: { $0.kind == .strength })?.target, 5)
@@ -142,11 +164,13 @@ final class SimulationTests: XCTestCase {
     func testEveryLevelIsCompletableWithActualMovementAndDestruction() {
         for level in Level.all {
             var sim = Simulation(level: level)
-            // Pursue the best warm air, as a player would, so the tougher cities grow naturally.
-            for _ in 0..<1700 {
-                _ = sim.step(delta: 0.1, direction: vector(from: sim.position, to: bestWarmPoint(sim)))
-            }
             var destroyedKinds: Set<ObjectKind> = []
+            // Pursue the best warm air, as a player would, so the tougher cities grow naturally.
+            // Destruction during this phase counts too: some cities can finish while chasing warm air.
+            for _ in 0..<1700 {
+                let result = sim.step(delta: 0.1, direction: vector(from: sim.position, to: bestWarmPoint(sim)))
+                for id in result.destroyed { destroyedKinds.insert(sim.objects[id].kind) }
+            }
             for _ in 0..<12000 {
                 if sim.finished || sim.dissipated { break }
                 let target: Point

@@ -10,11 +10,11 @@ final class GameplayUITests: XCTestCase {
         XCTAssertTrue(upgrades.waitForExistence(timeout: 10))
         XCTAssertTrue(upgrades.isHittable)
         upgrades.tap()
-        let suction = app.buttons["upgrade-suction"]
+        let suction = app.buttons["upgrade-suction-1"]
         XCTAssertTrue(suction.waitForExistence(timeout: 5))
         XCTAssertTrue(suction.isHittable)
-        XCTAssertTrue(app.buttons["upgrade-stability"].exists)
-        XCTAssertTrue(app.buttons["upgrade-speed"].exists)
+        XCTAssertTrue(app.buttons["upgrade-stability-1"].exists)
+        XCTAssertTrue(app.buttons["upgrade-speed-1"].exists)
     }
 
     @MainActor

@@ -45,13 +45,39 @@ final class AppTests: XCTestCase {
             let atlas = UIImage(named: "TornadoVortexAtlas")
             XCTAssertNotNil(atlas)
             if let atlas {
-                XCTAssertEqual(atlas.size.width / atlas.size.height, 8, accuracy: 0.05)
+                XCTAssertEqual(atlas.size.width / atlas.size.height, 1.5, accuracy: 0.05)
             }
             let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
             let view = SKView(frame: CGRect(x: 0, y: 0, width: 896, height: 414))
             view.presentScene(scene)
             XCTAssertNotNil(scene.childNode(withName: "//vortexSprite"))
             scene.stop()
+        }
+    }
+    func testVortexUsesContinuousRotationAndFreezesWhenPaused() async throws {
+        try await MainActor.run {
+            let scene = TornadoScene(level: Level.all[0], progress: TornadoCore.Progress())
+            let view = SKView(frame: CGRect(x: 0, y: 0, width: 896, height: 414))
+            view.presentScene(scene)
+            defer { scene.stop() }
+            let sprite = try XCTUnwrap(scene.childNode(withName: "//vortexSprite") as? SKSpriteNode)
+            let tornado = try XCTUnwrap(sprite.parent)
+            XCTAssertEqual(view.preferredFramesPerSecond, 60)
+            XCTAssertFalse(sprite.hasActions(), "One phase replaces competing animation actions")
+            scene.update(0)
+            scene.update(1.0 / 60)
+            XCTAssertGreaterThan(sprite.zRotation, 0)
+            XCTAssertEqual(tornado.xScale, CGFloat(scene.simulation.radius / 26), accuracy: 0.0001)
+            let rotation = sprite.zRotation
+            scene.isPaused = true
+            scene.update(10)
+            XCTAssertEqual(sprite.zRotation, rotation)
+            scene.isPaused = false
+            scene.resetClock()
+            scene.update(11)
+            XCTAssertEqual(sprite.zRotation, rotation)
+            scene.update(11 + 1.0 / 60)
+            XCTAssertGreaterThan(sprite.zRotation, rotation)
         }
     }
     func testEveryCityBuildsAScene() async {
@@ -120,10 +146,10 @@ final class AppTests: XCTestCase {
             let earned = store.record(result, simulation: sim)
             XCTAssertEqual(earned.completion, 200)
             XCTAssertEqual(store.progress.coins, 260)
-            store.purchase(.speed)
+            store.purchase(.suction)
             let restored = ProgressStore(defaults: defaults)
             XCTAssertEqual(restored.progress.coins, 200)
-            XCTAssertEqual(restored.progress.rank(.speed), 1)
+            XCTAssertEqual(restored.progress.rank(.suction), 1)
             let replay = restored.record(result, simulation: sim)
             XCTAssertEqual(replay.coins, 50)
             XCTAssertEqual(restored.progress.coins, 250)

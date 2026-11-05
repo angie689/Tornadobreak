@@ -66,6 +66,31 @@ public enum Upgrade: String, CaseIterable, Codable, Identifiable, Sendable {
         case .speed: return "Move faster across the map. +12% movement per rank."
         }
     }
+    /// A rank is a separate node in the tree. Raw values stay stable for existing saves.
+    public func nodeTitle(rank: Int) -> String {
+        let names: [String]
+        switch self {
+        case .suction:
+            names = ["Funnel formation", "Spiral inflow", "Debris lift", "Vortex core", "Violent updraft"]
+        case .stability:
+            names = ["Warm inflow", "Moisture feed", "Pressure balance", "Sustained funnel", "Supercell engine"]
+        case .speed:
+            names = ["Storm steering", "Gust front", "Rear-flank surge", "Mesocyclone drive", "Storm runner"]
+        }
+        return names[min(max(rank - 1, 0), names.count - 1)]
+    }
+    public var branchTitle: String {
+        switch self {
+        case .suction: return "Vortex power"
+        case .stability: return "Storm endurance"
+        case .speed: return "Storm motion"
+        }
+    }
+    public func requirement(forRank rank: Int) -> (upgrade: Upgrade, rank: Int)? {
+        guard rank > 0, rank <= Self.maxRank else { return nil }
+        if rank > 1 { return (self, rank - 1) }
+        return self == .suction ? nil : (.suction, 1)
+    }
     // Existing rank 1–3 purchases and their effects remain unchanged in saved games.
     public static let maxRank = 5
     private static let prices = [60, 130, 200, 450, 900]
@@ -79,10 +104,21 @@ public struct Progress: Codable, Equatable, Sendable {
     public var upgrades: [String: Int] = [:]
     public init() {}
     public func rank(_ upgrade: Upgrade) -> Int { min(Upgrade.maxRank, max(0, upgrades[upgrade.rawValue, default: 0])) }
+    public func isUnlocked(_ upgrade: Upgrade, rank target: Int) -> Bool {
+        guard (1...Upgrade.maxRank).contains(target) else { return false }
+        // Previously purchased branches remain usable, including saves made before the tree existed.
+        if rank(upgrade) >= target { return true }
+        guard let requirement = upgrade.requirement(forRank: target) else { return true }
+        return rank(requirement.upgrade) >= requirement.rank
+    }
+    public func canPurchase(_ upgrade: Upgrade, rank target: Int) -> Bool {
+        target == rank(upgrade) + 1 && isUnlocked(upgrade, rank: target)
+            && coins >= Upgrade.cost(rank: target - 1)
+    }
     @discardableResult public mutating func purchase(_ upgrade: Upgrade) -> Bool {
         let current = rank(upgrade)
         let cost = Upgrade.cost(rank: current)
-        guard current < Upgrade.maxRank, coins >= cost else { return false }
+        guard canPurchase(upgrade, rank: current + 1) else { return false }
         coins -= cost
         upgrades[upgrade.rawValue] = current + 1
         return true

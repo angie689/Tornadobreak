@@ -12,6 +12,27 @@ final class TornadoScene: SKScene {
     private let objectsLayer = SKNode()
     private let effects = SKNode()
     private let tornado = SKNode()
+    private var vortexAnimation = VortexAnimation()
+    private var vortexSprite: SKSpriteNode?
+    private var vortexFrame = 0
+    // Shared atlas/subtextures survive scene changes; no texture allocation in update.
+    private static let vortexFrames: [SKTexture] = {
+        let atlas = SKTexture(imageNamed: "TornadoVortexAtlas")
+        atlas.filteringMode = .linear
+        return (0..<VortexAnimation.frameCount).map { index in
+            let column = index % VortexAnimation.columns
+            let row = index / VortexAnimation.columns
+            // PNG rows start at the top; SpriteKit texture coordinates start below.
+            let region = CGRect(
+                x: CGFloat(column) / CGFloat(VortexAnimation.columns),
+                y: CGFloat(VortexAnimation.rows - row - 1) / CGFloat(VortexAnimation.rows),
+                width: 1 / CGFloat(VortexAnimation.columns),
+                height: 1 / CGFloat(VortexAnimation.rows))
+            let texture = SKTexture(rect: region, in: atlas)
+            texture.filteringMode = .linear
+            return texture
+        }
+    }()
     private let cameraNode = SKCameraNode()
     private var objectNodes: [Int: SKNode] = [:]
     private var direction = Point(0, 0)
@@ -29,6 +50,7 @@ final class TornadoScene: SKScene {
     }
     required init?(coder aDecoder: NSCoder) { fatalError("Scene is created in code") }
     override func didMove(to view: SKView) {
+        view.preferredFramesPerSecond = 60
         guard !built else { return }
         built = true
         addChild(ground)
@@ -64,6 +86,7 @@ final class TornadoScene: SKScene {
         // The animated spiral widens naturally as the tornado strengthens.
         let baseScale = simulation.radius / 26
         tornado.setScale(baseScale)
+        updateVortex(delta: delta)
         updateCamera()
         hudTime += delta
         let publish = hudTime >= 0.1
@@ -202,23 +225,21 @@ final class TornadoScene: SKScene {
         tornado.name = "tornado"
         tornado.zPosition = 8
         addChild(tornado)
-        // All eight 40x40 transparent frames live in a single 8:1 atlas texture.
-        // This avoids loading eight separate PNGs and minimizes GPU texture switches.
-        let atlas = SKTexture(imageNamed: "TornadoVortexAtlas")
-        atlas.filteringMode = .linear
-        let frames: [SKTexture] = (0..<8).map { index in
-            let region = CGRect(x: CGFloat(index) / 8, y: 0, width: 1.0 / 8, height: 1)
-            let texture = SKTexture(rect: region, in: atlas)
-            texture.filteringMode = .linear
-            return texture
-        }
-        let vortex = SKSpriteNode(texture: frames[0], size: CGSize(width: 58, height: 58))
+        let vortex = SKSpriteNode(texture: Self.vortexFrames[0], size: CGSize(width: 58, height: 58))
         vortex.name = "vortexSprite"
         tornado.addChild(vortex)
-        // Generated frames cycle smoothly; rotation gives the vortex continuous motion.
-        vortex.run(.repeatForever(.animate(with: frames, timePerFrame: 0.105)))
-        vortex.run(.repeatForever(.rotate(byAngle: .pi * 2, duration: 1.7)))
+        vortexSprite = vortex
+        tornado.setScale(simulation.radius / 26)
         tornado.position = CGPoint(x: simulation.position.x, y: simulation.position.y)
+    }
+    private func updateVortex(delta: TimeInterval) {
+        vortexAnimation.advance(delta: delta, energy: simulation.energy)
+        let frame = vortexAnimation.frameIndex
+        if frame != vortexFrame {
+            vortexSprite?.texture = Self.vortexFrames[frame]
+            vortexFrame = frame
+        }
+        vortexSprite?.zRotation = CGFloat(vortexAnimation.residualAngle)
     }
     private func updateLiftingObjects() {
         var active: Set<Int> = []

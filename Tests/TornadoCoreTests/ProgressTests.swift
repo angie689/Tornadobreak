@@ -3,6 +3,50 @@ import XCTest
 @testable import TornadoCore
 
 final class ProgressTests: XCTestCase {
+    func testFunnelUnlocksBothBranchesAndBlockedPurchasesDoNotSpendCoins() {
+        var progress = TornadoCore.Progress()
+        progress.coins = 1000
+        let before = progress
+        XCTAssertFalse(progress.purchase(.stability))
+        XCTAssertFalse(progress.purchase(.speed))
+        XCTAssertEqual(progress, before)
+        XCTAssertFalse(progress.canPurchase(.suction, rank: 2))
+        XCTAssertTrue(progress.purchase(.suction))
+        XCTAssertTrue(progress.isUnlocked(.stability, rank: 1))
+        XCTAssertTrue(progress.isUnlocked(.speed, rank: 1))
+        XCTAssertTrue(progress.purchase(.stability))
+        XCTAssertTrue(progress.purchase(.speed))
+        XCTAssertEqual(progress.coins, 820)
+    }
+
+    func testEachBranchRequiresPreviousNodeAndCannotSkipRanks() {
+        var progress = TornadoCore.Progress()
+        progress.coins = 10000
+        XCTAssertTrue(progress.purchase(.suction))
+        for upgrade in Upgrade.allCases {
+            for target in (progress.rank(upgrade) + 1)...Upgrade.maxRank {
+                XCTAssertTrue(progress.canPurchase(upgrade, rank: target))
+                XCTAssertFalse(progress.canPurchase(upgrade, rank: target + 1))
+                XCTAssertTrue(progress.purchase(upgrade))
+            }
+            XCTAssertFalse(progress.purchase(upgrade))
+            XCTAssertFalse(progress.canPurchase(upgrade, rank: 0))
+            XCTAssertFalse(progress.canPurchase(upgrade, rank: Upgrade.maxRank + 1))
+        }
+    }
+
+    func testLegacyChildBranchRemainsPurchasedAndCanAdvance() throws {
+        let json = #"{"coins":130,"completedLevels":[],"claimedQuests":[],"upgrades":{"speed":1}}"#
+        var progress = try JSONDecoder().decode(TornadoCore.Progress.self, from: Data(json.utf8))
+        XCTAssertTrue(progress.isUnlocked(.speed, rank: 1))
+        XCTAssertTrue(progress.purchase(.speed))
+        XCTAssertEqual(progress.rank(.speed), 2)
+        XCTAssertEqual(progress.rank(.suction), 0)
+        XCTAssertEqual(progress.coins, 0)
+        XCTAssertFalse(progress.purchase(.speed))
+        XCTAssertEqual(progress.rank(.speed), 2)
+    }
+
     func testCompletionPaysFullOnceThenQuarter() {
         for level in Level.all {
             var progress = TornadoCore.Progress()

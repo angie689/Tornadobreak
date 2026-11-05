@@ -147,3 +147,32 @@ natural EF0–EF5 growth and a small capped debris burst. No fluid simulation or
 per level and the HUD refreshes at 10 Hz. Sound, haptics, and run resumption after
 termination are outside this version.
 
+
+### Vortex rendering and upgrade tree
+
+The tornado uses a 24-frame, 6 × 4 transparent atlas (192 pixels per frame).
+Frames sample the same cloud field at 15° counterclockwise intervals. A single
+elapsed-time phase selects the frame and applies the remaining angle every render
+update, including the last-to-first seam. This avoids independent animation clocks
+and translucent crossfade ghosting. The view requests 60 FPS; actual device frame
+rate still needs profiling on hardware. Rotation accelerates continuously with
+energy; the existing EF0–EF5 radius and gameplay thresholds are preserved.
+Subtextures are cached across scenes and changed only at frame boundaries. The
+atlas occupies about 3.4 MiB of uncompressed RGBA pixels, with no per-frame image
+generation. Pause freezes the phase and resume resets the scene clock.
+
+Regenerate the procedural cloud art with `python3 scripts/generate_vortex_atlas.py`
+(requires NumPy and Pillow). Core tests cover time-step independence, all 24 frames,
+counterclockwise movement, and the wrap seam; native app tests check the bundled
+atlas and scene. Run `swift test` for core logic. iOS rendering/UI tests require
+Xcode and run in the pull-request workflow.
+
+The upgrade menu now starts with **Funnel formation**, then splits into **Vortex
+power**, **Storm endurance**, and **Storm motion**. Each named rank unlocks the next
+rank on its branch. Locked nodes explain their prerequisite; available nodes show
+the price or missing coins. Existing saved ranks, upgrade effects, and prices are
+retained, including previously purchased branches from before prerequisites existed.
+
+The boundary-camping exploit is fixed: pushing against the world edge no longer
+counts as movement for warm-air growth. Low-energy warnings also cover mixed air
+in cities where it drains the tornado.
