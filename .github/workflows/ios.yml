@@ -46,11 +46,13 @@ jobs:
             CODE_SIGN_IDENTITY='' 2>&1 | tee build/device.log
       - name: Package and verify IPA and download ZIP
         run: scripts/package_ipa.sh
-      - name: Upload iPhone ZIP
+      - name: Upload iPhone build
         uses: actions/upload-artifact@v4
         with:
           name: Tornadobreak-iPhone
-          path: dist/Tornadobreak-iPhone.zip
+          path: |
+            dist/Tornadobreak.ipa
+            dist/SIDELOAD.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
