@@ -124,7 +124,7 @@ private struct GameRunView: View {
     private var controls: some View {
         HStack(alignment: .bottom, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                if session.simulation.energy < 10 && session.simulation.weather.isCold {
+                if session.simulation.energy < 10 && !session.simulation.weather.isWarm {
                     Text(session.simulation.energy <= 0
                         ? "\(session.simulation.dissipationRemaining)s left · Get to green air!"
                         : "LOW ENERGY · Find green air!")

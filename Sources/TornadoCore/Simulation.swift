@@ -175,17 +175,18 @@ public struct Simulation {
         guard !finished, !dissipated, delta.isFinite, delta > 0 else { return result }
         let dt = min(delta, 0.1)
         elapsed += dt
+        let previousPosition = position
         let magnitude = hypot(direction.x, direction.y)
         if magnitude.isFinite, magnitude > 0.08 {
-            stationaryTime = 0
             let divisor = max(1, magnitude)
             position.x += direction.x / divisor * speed * dt
             position.y += direction.y / divisor * speed * dt
-        } else {
-            stationaryTime += dt
         }
         position.x = min(max(24, position.x), Level.worldSize.x - 24)
         position.y = min(max(24, position.y), Level.worldSize.y - 24)
+        // Pushing against the map boundary is still camping. Count actual movement,
+        // not joystick input, so holding a blocked direction cannot bypass the penalty.
+        stationaryTime = position.distance(to: previousPosition) > 0.000001 ? 0 : stationaryTime + dt
         let rate: Double
         let camping = level.tuning.campDelay > 0 && stationaryTime > level.tuning.campDelay
         let stability = 1 - 0.14 * Double(ranks[.stability, default: 0])

@@ -1,5 +1,9 @@
 name: Build iPhone game
 on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
   push:
     branches: [main]
     paths-ignore:
